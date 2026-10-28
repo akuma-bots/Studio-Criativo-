@@ -167,7 +167,10 @@ async def on_message(message: discord.Message):
                     except discord.HTTPException:
                         logging.exception("Falha ao atribuir cargo por nível")
             if user["level"] > old_level:
-                await message.channel.send(
+                level_channel_id = settings.get("level_channel")
+                level_channel = message.guild.get_channel(int(level_channel_id)) if level_channel_id else None
+                destination = level_channel if isinstance(level_channel, discord.TextChannel) else message.channel
+                await destination.send(
                     f"🎉 {message.author.mention} subiu para o nível **{user['level']}**!"
                 )
     await bot.process_commands(message)
@@ -177,9 +180,10 @@ async def on_message(message: discord.Message):
 async def ajuda(interaction: discord.Interaction):
     embed = discord.Embed(title="Studio Criativo Pro • Ajuda", color=discord.Color.blurple())
     embed.description = (
-        "**Economia:** /saldo, /diario, /trabalhar, /pagar, /ranking\n"
-        "**Experiência:** /nivel, /ranking_xp\n"
-        "**Configuração:** /configurar\n"
+        "**Economia:** /saldo, /diario, /trabalhar, /pagar, /ranking, /loja, /comprar, /inventario\n"
+        "**Experiência:** /nivel, /ranking_xp, /missao, /conquistas, /cargo_nivel\n"
+        "**Comunidade:** /sugerir, /votacao, /sorteio, /ticket\n"
+        "**Configuração:** /configurar, /configurar_sistemas, /autorole\n"
         "**Moderação:** /ban, /kick, /timeout, /limpar\n"
         "**Utilidade:** /ping"
     )
