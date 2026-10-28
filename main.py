@@ -109,7 +109,7 @@ async def log_event(guild: discord.Guild, message: str) -> None:
     )
     embed.add_field(name="Servidor", value=discord.utils.escape_markdown(guild.name)[:200], inline=True)
     embed.add_field(name="Categoria", value=category, inline=True)
-    embed.set_footer(text="STUDIO DRACONIC • Central de registros", icon_url=guild.icon.url if guild.icon else discord.Embed.Empty)
+    embed.set_footer(text="STUDIO DRACONIC • Central de registros")
     try:
         await channel.send(embed=embed)
     except discord.HTTPException:
