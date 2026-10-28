@@ -999,6 +999,24 @@ class StudioFeatures(commands.Cog):
                 await set_data(self.redis, products_key, products)
             if changed:
                 await self.bot.put_json(self.bot.settings_key(guild.id), settings)
+            ticket_panel_channel = guild.get_channel(STUDIO_CHANNELS["ticket_channel"])
+            if isinstance(ticket_panel_channel, discord.TextChannel):
+                try:
+                    found_panel = False
+                    async for old_panel in ticket_panel_channel.history(limit=50):
+                        if old_panel.author == self.bot.user and old_panel.embeds and old_panel.embeds[0].title == "♛ KAUANLLZ STUDIO • CENTRAL DE ATENDIMENTO":
+                            found_panel = True
+                            break
+                    if not found_panel:
+                        panel = discord.Embed(title="♛ KAUANLLZ STUDIO • CENTRAL DE ATENDIMENTO", description="**BEM-VINDO(A) AO SUPORTE OFICIAL**\n\nEscolha o assunto no menu abaixo e abriremos um canal privado para acompanhar seu caso.\n\n**✦ Atendimento organizado**\nCada ticket tem um assunto específico.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada podem ver o atendimento. Nunca compartilhe senhas ou códigos.", color=discord.Color.from_rgb(155, 35, 255))
+                        panel.add_field(name="🛍️ Comprar Algo", value="Produtos, combos e encomendas.", inline=True)
+                        panel.add_field(name="💬 Dúvidas", value="Preços, prazos e funcionamento.", inline=True)
+                        panel.add_field(name="🛠️ Suporte Técnico", value="Pedidos, pagamentos e entregas.", inline=True)
+                        panel.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha uma opção no menu.", inline=False)
+                        panel.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Preto & Roxo Neon")
+                        await ticket_panel_channel.send(embed=panel, view=TicketPanelView())
+                except discord.HTTPException:
+                    log.exception("Falha ao publicar painel de atendimento")
             # Publica catálogo e tabela de preços uma única vez, sem duplicar após reinicializações.
             catalog = guild.get_channel(STUDIO_CHANNELS["store_catalog_channel"])
             if isinstance(catalog, discord.TextChannel):
