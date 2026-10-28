@@ -48,6 +48,100 @@ async def feature_log(bot, guild, message):
         log.exception("Falha ao registrar evento")
 
 
+STORE_CATEGORIES = {
+    "roupas": ("👕 Roupas & Uniformes", "Uniformes de facção, conjuntos casuais, roupas sociais e peças personalizadas para seu personagem."),
+    "acessorios": ("🧢 Acessórios", "Bonés, correntes, máscaras, óculos e outros acessórios compatíveis com o estilo do seu personagem."),
+    "pacotes": ("📦 Pacotes RP", "Combos de roupas, conjuntos exclusivos e pacotes personalizados para grupos e facções."),
+    "personalizados": ("🎨 Personalizados", "Desenvolvimento de peças sob medida, identidade visual de facção e uniformes exclusivos."),
+}
+
+
+class VerificationView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Verificar-se", style=discord.ButtonStyle.success, emoji="🛡️", custom_id="scpro:verify:member")
+    async def verify_member(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+            return await ephemeral(interaction, "Use esta verificação dentro do servidor.")
+        settings = await interaction.client.get_settings(interaction.guild.id)
+        role_id = settings.get("verified_role_id")
+        if not role_id:
+            return await ephemeral(interaction, "A verificação ainda não foi configurada. Peça à equipe para usar /configurar_verificacao.")
+        role = interaction.guild.get_role(int(role_id))
+        me = interaction.guild.me
+        if role is None or me is None or role >= me.top_role:
+            return await ephemeral(interaction, "Não consegui atribuir o cargo. A equipe precisa revisar a hierarquia de cargos do bot.")
+        if role in interaction.user.roles:
+            return await ephemeral(interaction, "Você já está verificado! ✅")
+        try:
+            await interaction.user.add_roles(role, reason="Verificação pelo painel do Studio Criativo")
+        except discord.Forbidden:
+            return await ephemeral(interaction, "Não tenho permissão para atribuir o cargo de verificado.")
+        except discord.HTTPException:
+            return await ephemeral(interaction, "A verificação falhou temporariamente. Tente novamente.")
+        await ephemeral(interaction, f"✅ Verificação concluída! Você recebeu {role.mention}. Bem-vindo(a)!")
+        try:
+            await interaction.client.log_event(interaction.guild, f"🛡️ {interaction.user.mention} concluiu a verificação.")
+        except Exception:
+            log.exception("Falha ao registrar verificação")
+
+
+class StoreOrderView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Fazer pedido", style=discord.ButtonStyle.primary, emoji="🛍️", custom_id="scpro:store:order")
+    async def order(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este painel dentro do servidor.")
+        settings = await interaction.client.get_settings(interaction.guild.id)
+        role_id = settings.get("verified_role_id")
+        if role_id and isinstance(interaction.user, discord.Member):
+            role = interaction.guild.get_role(int(role_id))
+            if role and role not in interaction.user.roles:
+                return await ephemeral(interaction, "Antes de fazer um pedido, conclua a verificação no canal de verificação.")
+        guild = interaction.guild
+        existing = discord.utils.find(lambda ch: isinstance(ch, discord.TextChannel) and ch.topic and f"scpro-ticket-owner:{interaction.user.id}" in ch.topic and "scpro-order:true" in ch.topic, guild.text_channels)
+        if existing:
+            return await ephemeral(interaction, f"Você já tem um pedido em andamento: {existing.mention}")
+        category = guild.get_channel(int(settings["ticket_category"])) if settings.get("ticket_category") else None
+        if not isinstance(category, discord.CategoryChannel):
+            category = None
+        me = guild.me
+        if me is None:
+            return await ephemeral(interaction, "Não consegui verificar as permissões do bot.")
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True),
+            me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_channels=True),
+        }
+        staff_role = guild.get_role(int(settings["ticket_staff_role"])) if settings.get("ticket_staff_role") else None
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+        channel = await guild.create_text_channel(
+            name=f"pedido-{interaction.user.name[:12]}".lower().replace(" ", "-"),
+            category=category, overwrites=overwrites,
+            topic=f"Pedido de roupa GTA RP | scpro-ticket-owner:{interaction.user.id} scpro-order:true",
+            reason=f"Pedido da loja aberto por {interaction.user}"
+        )
+        embed = discord.Embed(
+            title="🛍️ Novo pedido • Studio Criativo",
+            description=(f"Olá {interaction.user.mention}! Conte à equipe o que você procura.\n\n"
+                         "**Para agilizar, envie:**\n"
+                         "• Produto ou categoria desejada\n• Servidor/cidade de GTA RP\n"
+                         "• Quantidade e detalhes do modelo\n• Referências ou imagens, se tiver\n\n"
+                         "A equipe confirma preço, prazo e forma de pagamento neste ticket. **Não envie senhas ou dados de acesso.**"),
+            color=discord.Color.blurple()
+        )
+        await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
+        await ephemeral(interaction, f"Seu atendimento foi aberto: {channel.mention}")
+        try:
+            await interaction.client.log_event(guild, f"🛍️ Pedido da loja aberto por {interaction.user.mention}: {channel.mention}")
+        except Exception:
+            log.exception("Falha ao registrar pedido")
+
+
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -141,6 +235,67 @@ class StudioFeatures(commands.Cog):
             return await ephemeral(interaction, "Informe pelo menos um canal ou categoria. Os outros valores serão mantidos.")
         await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
         await interaction.response.send_message("Canais padrão salvos no Upstash Redis:\n" + "\n".join(changed), ephemeral=True)
+
+    @app_commands.command(name="configurar_verificacao", description="Configura o cargo de verificado e publica o painel")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def configurar_verificacao(self, interaction: discord.Interaction, cargo_verificado: discord.Role, canal: discord.TextChannel = None):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        guild = interaction.guild
+        me = guild.me
+        if cargo_verificado.is_default() or cargo_verificado.managed or me is None or cargo_verificado >= me.top_role:
+            return await ephemeral(interaction, "O cargo escolhido precisa estar abaixo do cargo mais alto do bot e não pode ser gerenciado.")
+        settings = await self.bot.get_settings(guild.id)
+        settings["verified_role_id"] = cargo_verificado.id
+        if canal is not None:
+            settings["verification_channel"] = canal.id
+        await self.bot.put_json(self.bot.settings_key(guild.id), settings)
+        target = canal or interaction.channel
+        if not isinstance(target, discord.TextChannel):
+            return await ephemeral(interaction, "Escolha um canal de texto para publicar o painel.")
+        embed = discord.Embed(
+            title="🛡️ Verificação de acesso",
+            description=("Para liberar o acesso à comunidade do **Studio Criativo**, clique no botão abaixo.\n\n"
+                         "**Como funciona**\n"
+                         "1. Clique em **Verificar-se**.\n"
+                         "2. O bot atribuirá seu cargo de acesso.\n"
+                         "3. Os canais liberados pelo servidor ficarão disponíveis conforme as permissões.\n\n"
+                         "🔐 A verificação acontece dentro do Discord. **Nunca pedimos sua senha, token ou login de GTA.**"),
+            color=discord.Color.blurple()
+        )
+        embed.set_footer(text="Studio Criativo • Verificação oficial")
+        await target.send(embed=embed, view=VerificationView())
+        await ephemeral(interaction, f"Painel publicado em {target.mention}; cargo de verificado: {cargo_verificado.mention}.")
+
+    @app_commands.command(name="catalogo_roupas", description="Publica o catálogo da loja de roupas GTA RP")
+    @app_commands.describe(canal="Canal onde o catálogo será publicado; por padrão, o canal atual")
+    async def catalogo_roupas(self, interaction: discord.Interaction, canal: discord.TextChannel = None):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        target = canal or interaction.channel
+        if not isinstance(target, discord.TextChannel):
+            return await ephemeral(interaction, "Escolha um canal de texto.")
+        settings = await self.bot.get_settings(interaction.guild.id)
+        verified_id = settings.get("verified_role_id")
+        if verified_id and isinstance(interaction.user, discord.Member):
+            verified_role = interaction.guild.get_role(int(verified_id))
+            if verified_role and verified_role not in interaction.user.roles and not interaction.user.guild_permissions.manage_guild:
+                return await ephemeral(interaction, "Conclua a verificação antes de publicar ou acessar este sistema.")
+        embed = discord.Embed(
+            title="👕 Studio Criativo • Loja GTA RP",
+            description=("**Estilo para seu personagem. Identidade para sua cidade.**\n"
+                         "Confira nossas categorias e abra um atendimento para solicitar orçamento.\n\n"
+                         "🧵 **Peças personalizadas** • 👔 **Uniformes e conjuntos** • 🧢 **Acessórios** • 🎨 **Identidade de facção**\n\n"
+                         "Os modelos, valores e prazos são confirmados pela equipe antes do pagamento. Envie referências no ticket para receber um orçamento."),
+            color=discord.Color.from_rgb(125, 75, 220)
+        )
+        for _, (name, description) in STORE_CATEGORIES.items():
+            embed.add_field(name=name, value=description, inline=False)
+        embed.add_field(name="📋 Como comprar", value="1. Clique em **Fazer pedido**.\n2. Informe a cidade, o modelo e a quantidade.\n3. Aguarde a confirmação do orçamento pela equipe.", inline=False)
+        embed.set_footer(text="Studio Criativo • Loja de roupas para GTA RP | Nunca compartilhe senhas")
+        await target.send(embed=embed, view=StoreOrderView())
+        await ephemeral(interaction, f"Catálogo publicado em {target.mention}.")
 
     @app_commands.command(name="loja", description="Mostra os itens disponíveis")
     async def loja(self, interaction):
@@ -455,3 +610,5 @@ async def setup(bot):
     await bot.add_cog(StudioFeatures(bot))
     bot.add_view(TicketView())
     bot.add_view(GiveawayView())
+    bot.add_view(VerificationView())
+    bot.add_view(StoreOrderView())
