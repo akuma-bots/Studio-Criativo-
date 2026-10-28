@@ -66,6 +66,22 @@ async def feature_log(bot, guild, message):
         log.exception("Falha ao registrar evento")
 
 
+async def upsert_bot_message(channel, embed, view=None, limit=50):
+    """Edits the bot's existing panel with the same title; sends only if absent."""
+    if not isinstance(channel, discord.TextChannel):
+        return None
+    title = embed.title
+    try:
+        async for message in channel.history(limit=limit, oldest_first=False):
+            if message.author == channel.guild.me and message.embeds and message.embeds[0].title == title:
+                await message.edit(embed=embed, view=view)
+                return message
+        return await channel.send(embed=embed, view=view)
+    except discord.HTTPException:
+        log.exception("Falha ao atualizar painel %r no canal %s", title, channel.id)
+        return None
+
+
 STORE_CATEGORIES = {
     "roupas": ("👕 Roupas & Uniformes", "Uniformes de facção, conjuntos casuais, roupas sociais e peças personalizadas para seu personagem."),
     "acessorios": ("🧢 Acessórios", "Bonés, correntes, máscaras, óculos e outros acessórios compatíveis com o estilo do seu personagem."),
@@ -927,70 +943,41 @@ class StudioFeatures(commands.Cog):
             if changed:
                 await self.bot.put_json(self.bot.settings_key(guild.id), settings)
             ticket_panel_channel = guild.get_channel(STUDIO_CHANNELS["ticket_channel"])
-            if isinstance(ticket_panel_channel, discord.TextChannel):
-                try:
-                    found_panel = False
-                    async for old_panel in ticket_panel_channel.history(limit=50):
-                        if old_panel.author == self.bot.user and old_panel.embeds and old_panel.embeds[0].title == "♛ STUDIO DRACONIC • CENTRAL DE ATENDIMENTO":
-                            found_panel = True
-                            break
-                    if not found_panel:
-                        panel = discord.Embed(title="♛ STUDIO DRACONIC • CENTRAL DE ATENDIMENTO", description="**BEM-VINDO(A) AO SUPORTE OFICIAL**\n\nEscolha o assunto no menu abaixo e abriremos um canal privado para acompanhar seu caso.\n\n**✦ Atendimento organizado**\nCada ticket tem um assunto específico.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada podem ver o atendimento. Nunca compartilhe senhas ou códigos.", color=discord.Color.from_rgb(155, 35, 255))
-                        panel.add_field(name="🛍️ Comprar Algo", value="Produtos, combos e encomendas.", inline=True)
-                        panel.add_field(name="💬 Dúvidas", value="Preços, prazos e funcionamento.", inline=True)
-                        panel.add_field(name="🛠️ Suporte Técnico", value="Pedidos, pagamentos e entregas.", inline=True)
-                        panel.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha uma opção no menu.", inline=False)
-                        panel.set_footer(text="🐉 STUDIO DRACONIC • Preto & Roxo Neon")
-                        await ticket_panel_channel.send(embed=panel, view=TicketPanelView())
-                except discord.HTTPException:
-                    log.exception("Falha ao publicar painel de atendimento")
-            # Publica catálogo e tabela de preços uma única vez, sem duplicar após reinicializações.
+            panel = discord.Embed(title="♛ STUDIO DRACONIC • CENTRAL DE ATENDIMENTO", description="**BEM-VINDO(A) AO SUPORTE OFICIAL**\n\nEscolha o assunto no menu abaixo. O bot abrirá um canal privado e organizado para acompanhar seu caso.\n\n**✦ Atendimento organizado**\nCada ticket tem um assunto específico.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada podem ver o atendimento. Nunca compartilhe senhas ou códigos.", color=discord.Color.from_rgb(155, 35, 255))
+            panel.add_field(name="🛍️ Comprar Algo", value="Produtos, combos e encomendas.", inline=True)
+            panel.add_field(name="💬 Dúvidas", value="Preços, prazos e funcionamento.", inline=True)
+            panel.add_field(name="🛠️ Suporte Técnico", value="Pedidos, pagamentos e entregas.", inline=True)
+            panel.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha uma opção no menu.", inline=False)
+            panel.set_footer(text="🐉 STUDIO DRACONIC • Preto & Roxo Neon")
+            await upsert_bot_message(ticket_panel_channel, panel, TicketPanelView())
+
             catalog = guild.get_channel(STUDIO_CHANNELS["store_catalog_channel"])
             if isinstance(catalog, discord.TextChannel):
-                try:
-                    async for msg in catalog.history(limit=30):
-                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "🐉 STUDIO DRACONIC • CATÁLOGO":
-                            break
-                    else:
-                        embed = discord.Embed(title="♛ STUDIO DRACONIC", description="**IDENTIDADE. QUALIDADE. PERSONALIDADE.**\nRoupas e combos personalizados para seu projeto de GTA RP. Escolha seu pacote no menu abaixo e receba atendimento privado para alinhar referências, prazo e detalhes.", color=discord.Color.from_rgb(155, 35, 255))
-                        embed.add_field(name="👕 Pacotes disponíveis", value="1 peça — **R$ 25,00**\n2 peças • Combo M+F — **R$ 40,00**\n3 peças — **R$ 65,00**\n4 peças — **R$ 85,00**\n6 peças — **R$ 120,00**\n7 peças — **R$ 150,00**\n8 peças — **R$ 170,00**\n9 peças — **R$ 180,00**", inline=False)
-                        embed.add_field(name="✦ EXPERIÊNCIA DE COMPRA", value="`01` Escolha seu pacote.\n`02` Um ticket privado será aberto automaticamente.\n`03` A equipe alinha detalhes, valor e prazo.\n`04` Pague somente após a confirmação oficial.", inline=False)
-                        embed.set_footer(text="Studio Draconic • Qualidade, confiança e suporte sempre")
-                        await catalog.send(embed=embed, view=StoreOrderView())
-                except discord.HTTPException:
-                    log.exception("Falha ao publicar catálogo automático")
+                embed = discord.Embed(title="♛ STUDIO DRACONIC • CATÁLOGO", description="**IDENTIDADE. QUALIDADE. PERSONALIDADE.**\nRoupas e combos personalizados para seu projeto de GTA RP. Escolha seu pacote no menu e receba atendimento privado para alinhar referências, prazo e detalhes.", color=discord.Color.from_rgb(155, 35, 255))
+                embed.add_field(name="👕 Pacotes disponíveis", value="1 peça — **R$ 25,00**\n2 peças • Combo M+F — **R$ 40,00**\n3 peças — **R$ 65,00**\n4 peças — **R$ 85,00**\n6 peças — **R$ 120,00**\n7 peças — **R$ 150,00**\n8 peças — **R$ 170,00**\n9 peças — **R$ 180,00**", inline=False)
+                embed.add_field(name="✦ EXPERIÊNCIA DE COMPRA", value="**01** Escolha seu pacote.\n**02** Um ticket privado será aberto.\n**03** A equipe confirma detalhes, preço e prazo.\n**04** Pague somente após confirmação oficial.", inline=False)
+                embed.set_footer(text="STUDIO DRACONIC • Qualidade, confiança e suporte")
+                await upsert_bot_message(catalog, embed, StoreOrderView())
+
             products_channel = guild.get_channel(STUDIO_CHANNELS["products_channel"])
-            if isinstance(products_channel, discord.TextChannel):
-                try:
-                    async for msg in products_channel.history(limit=30):
-                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 TABELA DE PREÇOS • STUDIO DRACONIC":
-                            break
-                    else:
-                        price_embed = discord.Embed(title="♛ STUDIO DRACONIC  •  TABELA OFICIAL DE PREÇOS", description="**PREÇOS PROMOCIONAIS**\nCombos selecionados para elevar o padrão do seu projeto. Todos os pedidos são confirmados pela equipe antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
-                        price_embed.add_field(name="Quantidade", value="1 peça\n2 peças\n3 peças\n4 peças\n6 peças\n7 peças\n8 peças\n9 peças", inline=True)
-                        price_embed.add_field(name="Tipo de compra", value="Avulsa\nCombo M+F\n1 combo + 1 avulsa\n2 combos\n3 combos\n3 combos + 1 avulsa\n4 combos\n4 combos + 1 avulsa", inline=True)
-                        price_embed.add_field(name="Preço normal", value="R$ 25,00\nR$ 50,00\nR$ 75,00\nR$ 100,00\nR$ 150,00\nR$ 180,00\nR$ 200,00\nR$ 230,00", inline=True)
-                        price_embed.add_field(name="Total promocional", value="**R$ 25,00**\n**R$ 40,00**\n**R$ 65,00**\n**R$ 85,00**\n**R$ 120,00**\n**R$ 150,00**\n**R$ 170,00**\n**R$ 180,00**", inline=True)
-                        price_embed.set_footer(text="STUDIO DRACONIC  •  Consulte a equipe para quantidades especiais | Pix confirmado manualmente")
-                        await products_channel.send(embed=price_embed)
-                except discord.HTTPException:
-                    log.exception("Falha ao publicar tabela de preços")
+            price_embed = discord.Embed(title="♛ STUDIO DRACONIC • TABELA OFICIAL DE PREÇOS", description="**PREÇOS PROMOCIONAIS**\nCombos selecionados para elevar o padrão do seu projeto. A equipe confirma cada pedido antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
+            price_embed.add_field(name="Quantidade", value="1 peça\n2 peças\n3 peças\n4 peças\n6 peças\n7 peças\n8 peças\n9 peças", inline=True)
+            price_embed.add_field(name="Tipo de compra", value="Avulsa\nCombo M+F\n1 combo + 1 avulsa\n2 combos\n3 combos\n3 combos + 1 avulsa\n4 combos\n4 combos + 1 avulsa", inline=True)
+            price_embed.add_field(name="Preço normal", value="R$ 25,00\nR$ 50,00\nR$ 75,00\nR$ 100,00\nR$ 150,00\nR$ 180,00\nR$ 200,00\nR$ 230,00", inline=True)
+            price_embed.add_field(name="Total promocional", value="**R$ 25,00**\n**R$ 40,00**\n**R$ 65,00**\n**R$ 85,00**\n**R$ 120,00**\n**R$ 150,00**\n**R$ 170,00**\n**R$ 180,00**", inline=True)
+            price_embed.set_footer(text="STUDIO DRACONIC • Pix confirmado manualmente")
+            await upsert_bot_message(products_channel, price_embed)
+
             target = guild.get_channel(STUDIO_CHANNELS["functioning_channel"])
             if isinstance(target, discord.TextChannel):
-                try:
-                    async for msg in target.history(limit=30):
-                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 Como funciona o STUDIO DRACONIC":
-                            break
-                    else:
-                        embed = discord.Embed(title="💜 Como funciona o STUDIO DRACONIC", description="Bem-vindo(a)! Consulte os canais de informações e o catálogo, abra um ticket para atendimento e aguarde a equipe confirmar preço e prazo antes de pagar.", color=discord.Color.from_rgb(125, 75, 220))
-                        embed.add_field(name="🧭 Comece por aqui", value="Leia as regras e os termos nos canais indicados antes de fazer um pedido.", inline=False)
-                        embed.add_field(name="🎨 Serviços e catálogo", value="Confira os produtos e serviços disponíveis no catálogo oficial.", inline=False)
-                        embed.add_field(name="🎫 Atendimento", value="Pedidos e suporte devem continuar nos tickets privados do servidor.", inline=False)
-                        embed.add_field(name="💳 Pix e entrega", value="Confira o destinatário e pague apenas após a equipe confirmar o valor. A confirmação do pagamento é manual; a entrega é liberada após a validação.", inline=False)
-                        embed.add_field(name="🔐 Segurança", value="Nunca compartilhe senhas ou códigos. A equipe não pedirá seus dados de acesso.", inline=False)
-                        await target.send(embed=embed)
-                except discord.HTTPException:
-                    log.exception("Falha ao publicar o guia de funcionamento")
+                guide = discord.Embed(title="♛ STUDIO DRACONIC • COMO FUNCIONA", description="**GUIA OFICIAL DO SERVIDOR**\n\nLeia os termos, consulte o catálogo e use os tickets para manter os pedidos organizados.", color=discord.Color.from_rgb(155, 35, 255))
+                guide.add_field(name="01 • Comece por aqui", value="Leia as regras e os termos antes de solicitar um serviço.", inline=False)
+                guide.add_field(name="02 • Catálogo e serviços", value="Consulte os produtos e os preços nos canais oficiais.", inline=False)
+                guide.add_field(name="03 • Atendimento privado", value="Use a central de tickets para compras, dúvidas, suporte e parcerias.", inline=False)
+                guide.add_field(name="04 • Pagamento e entrega", value="Confirme valor e titular antes de pagar. A confirmação Pix é manual e a entrega ocorre após validação.", inline=False)
+                guide.add_field(name="05 • Segurança", value="Nunca compartilhe senhas, tokens ou códigos de autenticação.", inline=False)
+                guide.set_footer(text="🐉 STUDIO DRACONIC • Transparência em cada etapa")
+                await upsert_bot_message(target, guide)
         log.info("Sistemas extras carregados; instalação dedicada inicializada.")
 
     @commands.Cog.listener()
