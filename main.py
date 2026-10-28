@@ -97,6 +97,14 @@ class StudioBot(commands.Bot):
         except Exception:
             logging.exception("Não foi possível conectar ao Upstash Redis.")
             raise
+        self.redis = redis
+        self.get_settings = get_settings
+        self.put_json = put_json
+        self.settings_key = settings_key
+        self.get_user_data = get_user
+        self.save_user_data = save_user
+        self.log_event = log_event
+        await self.load_extension("features")
         synced = await self.tree.sync()
         logging.info("Sincronizados %s comandos slash", len(synced))
 
