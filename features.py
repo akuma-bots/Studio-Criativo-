@@ -207,7 +207,7 @@ class ProductSelect(discord.ui.Select):
             pix_lines.append("**Kauan Salles** — " + discord.utils.escape_markdown(str(pix_key_kauan)))
         pix_lines.append("Pague somente após a equipe confirmar o valor. Confira o nome do destinatário antes de concluir.")
         embed.add_field(name="Pagamento via Pix", value="\n".join(pix_lines)[:1024], inline=False)
-        embed.add_field(name="Próximos passos", value="1. Confirme os detalhes com a equipe.\n2. Pague via Pix após a confirmação.\n3. A equipe valida o recebimento e libera a entrega.", inline=False)
+        embed.add_field(name="✦ ETAPAS DO PEDIDO", value="`01`  Confirme modelo, quantidade e prazo com a equipe.\n`02`  Aguarde a confirmação do valor final.\n`03`  Confira o titular e pague via Pix.\n`04`  A equipe confirma o recebimento manualmente.\n`05`  A entrega é liberada após a validação.", inline=False)
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         order = {"order_id": order_id, "guild_id": guild.id, "channel_id": channel.id, "user_id": interaction.user.id, "product_id": product_id, "product_name": product["name"], "price": product.get("price", "A confirmar"), "status": "aguardando_pagamento", "created_at": int(time.time())}
         await set_data(interaction.client.redis, key(guild.id, f"store:order:{order_id}"), order)
@@ -330,7 +330,7 @@ class TicketPanelView(discord.ui.View):
             reason=f"Ticket aberto por {interaction.user}"
         )
         embed = discord.Embed(
-            title="🎫 Atendimento • Studio Criativo",
+            title="✦ KAUANLLZ STUDIO CRIATIVO  •  ATENDIMENTO",
             description=f"Olá {interaction.user.mention}! Explique sua dúvida ou problema abaixo.\n\n**Para compras:** use o catálogo de roupas e selecione o produto para criar um pedido com registro de compra.\n**Para suporte:** envie os detalhes e anexos necessários.\n\nNão envie senhas ou códigos de autenticação.",
             color=discord.Color.blurple()
         )
@@ -573,7 +573,7 @@ class StudioFeatures(commands.Cog):
         for _, (name, description) in STORE_CATEGORIES.items():
             embed.add_field(name=name, value=description, inline=False)
         embed.add_field(name="📋 Como comprar", value="1. Clique em **Fazer pedido**.\n2. Informe a cidade, o modelo e a quantidade.\n3. Aguarde a confirmação do orçamento pela equipe.", inline=False)
-        embed.set_footer(text="Studio Criativo • Loja de roupas para GTA RP | Nunca compartilhe senhas")
+        embed.set_footer(text="KAUANLLZ STUDIO CRIATIVO  •  Ideias que viram realidade")
         await target.send(embed=embed, view=StoreOrderView())
         await ephemeral(interaction, f"Catálogo publicado em {target.mention}.")
 
@@ -907,9 +907,9 @@ class StudioFeatures(commands.Cog):
                         if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "🐉 KAUANLLZ STUDIO CRIATIVO • CATÁLOGO":
                             break
                     else:
-                        embed = discord.Embed(title="🐉 KAUANLLZ STUDIO CRIATIVO • CATÁLOGO", description="**Ideias que viram realidade.**\nRoupas e combos personalizados para seu projeto. Escolha um pacote no seletor abaixo para abrir um ticket privado e combinar referências, prazo e detalhes com a equipe.", color=discord.Color.from_rgb(155, 35, 255))
+                        embed = discord.Embed(title="♛ KAUANLLZ STUDIO CRIATIVO", description="**IDENTIDADE. QUALIDADE. PERSONALIDADE.**\nRoupas e combos personalizados para seu projeto de GTA RP. Escolha seu pacote no menu abaixo e receba atendimento privado para alinhar referências, prazo e detalhes.", color=discord.Color.from_rgb(155, 35, 255))
                         embed.add_field(name="👕 Pacotes disponíveis", value="1 peça — **R$ 25,00**\n2 peças • Combo M+F — **R$ 40,00**\n3 peças — **R$ 65,00**\n4 peças — **R$ 85,00**\n6 peças — **R$ 120,00**\n7 peças — **R$ 150,00**\n8 peças — **R$ 170,00**\n9 peças — **R$ 180,00**", inline=False)
-                        embed.add_field(name="🛍️ Como pedir", value="1. Escolha o pacote no menu.\n2. O bot abrirá um ticket privado.\n3. A equipe confirma o pedido, o valor e o prazo.\n4. Pague via Pix somente após a confirmação.", inline=False)
+                        embed.add_field(name="✦ EXPERIÊNCIA DE COMPRA", value="`01` Escolha seu pacote.\n`02` Um ticket privado será aberto automaticamente.\n`03` A equipe alinha detalhes, valor e prazo.\n`04` Pague somente após a confirmação oficial.", inline=False)
                         embed.set_footer(text="Studio Criativo • Qualidade, confiança e suporte sempre")
                         await catalog.send(embed=embed, view=StoreOrderView())
                 except discord.HTTPException:
@@ -921,12 +921,12 @@ class StudioFeatures(commands.Cog):
                         if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 TABELA DE PREÇOS • STUDIO CRIATIVO":
                             break
                     else:
-                        price_embed = discord.Embed(title="💜 TABELA DE PREÇOS • STUDIO CRIATIVO", description="Combos promocionais conforme a tabela oficial enviada pelo proprietário.", color=discord.Color.from_rgb(155, 35, 255))
+                        price_embed = discord.Embed(title="♛ KAUANLLZ  •  TABELA OFICIAL DE PREÇOS", description="**PREÇOS PROMOCIONAIS**\nCombos selecionados para elevar o padrão do seu projeto. Todos os pedidos são confirmados pela equipe antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
                         price_embed.add_field(name="Quantidade", value="1 peça\n2 peças\n3 peças\n4 peças\n6 peças\n7 peças\n8 peças\n9 peças", inline=True)
                         price_embed.add_field(name="Tipo de compra", value="Avulsa\nCombo M+F\n1 combo + 1 avulsa\n2 combos\n3 combos\n3 combos + 1 avulsa\n4 combos\n4 combos + 1 avulsa", inline=True)
                         price_embed.add_field(name="Preço normal", value="R$ 25,00\nR$ 50,00\nR$ 75,00\nR$ 100,00\nR$ 150,00\nR$ 180,00\nR$ 200,00\nR$ 230,00", inline=True)
                         price_embed.add_field(name="Total promocional", value="**R$ 25,00**\n**R$ 40,00**\n**R$ 65,00**\n**R$ 85,00**\n**R$ 120,00**\n**R$ 150,00**\n**R$ 170,00**\n**R$ 180,00**", inline=True)
-                        price_embed.set_footer(text="Para quantidades não listadas, consulte a equipe no ticket. Pagamento Pix confirmado manualmente.")
+                        price_embed.set_footer(text="KAUANLLZ STUDIO CRIATIVO  •  Consulte a equipe para quantidades especiais | Pix confirmado manualmente")
                         await products_channel.send(embed=price_embed)
                 except discord.HTTPException:
                     log.exception("Falha ao publicar tabela de preços")
