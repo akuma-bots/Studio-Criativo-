@@ -275,6 +275,51 @@ class StoreOrderView(discord.ui.View):
             log.exception("Falha ao registrar pedido")
 
 
+
+class TicketPanelView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Abrir ticket", style=discord.ButtonStyle.primary, emoji="🎫", custom_id="scpro:ticket:open")
+    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild = interaction.guild
+        if guild is None:
+            return await ephemeral(interaction, "Use este painel dentro do servidor.")
+        existing = discord.utils.find(lambda ch: isinstance(ch, discord.TextChannel) and ch.topic and f"scpro-ticket-owner:{interaction.user.id}" in ch.topic, guild.text_channels)
+        if existing:
+            return await ephemeral(interaction, f"Você já tem um ticket aberto: {existing.mention}")
+        settings = await interaction.client.get_settings(guild.id)
+        category = guild.get_channel(int(settings["ticket_category"])) if settings.get("ticket_category") else None
+        if not isinstance(category, discord.CategoryChannel):
+            category = None
+        me = guild.me
+        if me is None:
+            return await ephemeral(interaction, "Não consegui verificar as permissões do bot.")
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True),
+            me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_channels=True),
+        }
+        staff_role = guild.get_role(int(settings["ticket_staff_role"])) if settings.get("ticket_staff_role") else None
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+        channel = await guild.create_text_channel(
+            name=f"ticket-{interaction.user.name[:12]}".lower().replace(" ", "-"),
+            category=category, overwrites=overwrites,
+            topic=f"Ticket de suporte | scpro-ticket-owner:{interaction.user.id}",
+            reason=f"Ticket aberto por {interaction.user}"
+        )
+        embed = discord.Embed(
+            title="🎫 Atendimento • Studio Criativo",
+            description=f"Olá {interaction.user.mention}! Explique sua dúvida ou problema abaixo.\n\n**Para compras:** use o catálogo de roupas e selecione o produto para criar um pedido com registro de compra.\n**Para suporte:** envie os detalhes e anexos necessários.\n\nNão envie senhas ou códigos de autenticação.",
+            color=discord.Color.blurple()
+        )
+        embed.set_footer(text="Studio Criativo • Atendimento privado")
+        await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
+        await ephemeral(interaction, f"Seu ticket foi criado: {channel.mention}")
+        await feature_log(interaction.client, guild, f"Ticket de suporte aberto por {interaction.user.mention}: {channel.mention}")
+
+
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -663,6 +708,21 @@ class StudioFeatures(commands.Cog):
         await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
         await interaction.response.send_message(f"Cargo {cargo.mention} configurado para o nível {nivel}.", ephemeral=True)
 
+    @app_commands.command(name="painel_tickets", description="Publica o painel profissional de atendimento")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def painel_tickets(self, interaction: discord.Interaction, canal: discord.TextChannel):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        embed = discord.Embed(
+            title="🎫 Central de Atendimento • Studio Criativo",
+            description="Precisa de ajuda com a loja, uma encomenda ou outro assunto?\n\n**Abra um ticket** para conversar em particular com a equipe.\n\n• Atendimento organizado e privado\n• Histórico mantido no canal do ticket\n• Para comprar roupas GTA RP, utilize também o catálogo da loja\n\nNão envie senhas, tokens ou códigos de autenticação.",
+            color=discord.Color.from_rgb(125, 75, 220)
+        )
+        embed.set_footer(text="Studio Criativo • Atendimento oficial")
+        await canal.send(embed=embed, view=TicketPanelView())
+        await ephemeral(interaction, f"Painel de tickets publicado em {canal.mention}.")
+
     @app_commands.command(name="ticket", description="Abre um canal privado de suporte")
     async def ticket(self, interaction, assunto: str = "Suporte"):
         if interaction.guild is None:
@@ -854,6 +914,7 @@ class StudioFeatures(commands.Cog):
 async def setup(bot):
     await bot.add_cog(StudioFeatures(bot))
     bot.add_view(TicketView())
+    bot.add_view(TicketPanelView())
     bot.add_view(GiveawayView())
     bot.add_view(VerificationView())
     bot.add_view(StoreOrderView())
