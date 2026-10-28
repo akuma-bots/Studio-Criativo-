@@ -152,9 +152,10 @@ async def on_member_join(member: discord.Member):
         channel = member.guild.get_channel(int(channel_id))
         if isinstance(channel, discord.TextChannel):
             embed = discord.Embed(
-                title="🐉 Bem-vindo(a) ao Studio Draconic!",
-                description=f"Olá {member.mention}! Seja bem-vindo(a) ao **{member.guild.name}**. Confira os canais de informações e abra um ticket se precisar de ajuda.",
-                color=discord.Color.blurple()
+                title="🐉 VOCÊ CHEGOU AO STUDIO DRACONIC",
+                description=f"Olá {member.mention}, seja muito bem-vindo(a) ao **{member.guild.name}**!\n\n✦ Leia os canais de funcionamento e termos para conhecer a comunidade.\n✦ Visite o catálogo para conhecer nossos produtos.\n✦ Precisa de ajuda? Abra um ticket pelo painel oficial.\n\n**Desejamos uma ótima experiência com a gente!**",
+                color=discord.Color.from_rgb(135, 65, 255),
+                timestamp=datetime.now(timezone.utc)
             )
             embed.set_thumbnail(url=member.display_avatar.url)
             await channel.send(embed=embed)
