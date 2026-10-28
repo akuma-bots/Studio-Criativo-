@@ -77,7 +77,7 @@ def panel_topic(title):
         return "prices"
     if any(word in normalized for word in ("como funciona", "funcionamento")):
         return "guide"
-    if "guia da loja" in normalized:
+    if "guia da loja" in normalized or "tutorial" in normalized or "como funciona" in normalized or "funcionamento" in normalized:
         return "tutorial"
     return None
 
@@ -601,41 +601,6 @@ class StudioFeatures(commands.Cog):
             await log_channel.send(f"📦 Pedido {pedido_id} entregue a <@{order['user_id']}>. Responsável: {interaction.user.mention}.")
         await ephemeral(interaction, f"Entrega do pedido {pedido_id} concluída e enviada por DM.")
 
-    @app_commands.command(name="tutorial_loja", description="Publica o tutorial interativo de compras da loja GTA RP")
-    @app_commands.describe(canal="Canal onde o tutorial será publicado")
-    async def tutorial_loja(self, interaction: discord.Interaction, canal: discord.TextChannel = None):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
-        target = canal or interaction.channel
-        if not isinstance(target, discord.TextChannel):
-            return await ephemeral(interaction, "Escolha um canal de texto.")
-        embed = StoreTutorialView()._embed()
-        await upsert_bot_message(target, embed, StoreTutorialView())
-        await ephemeral(interaction, f"Tutorial atualizado em {target.mention}; reutilizei a mensagem existente quando encontrada.")
-
-    @app_commands.command(name="catalogo_roupas", description="Publica o catálogo da loja de roupas GTA RP")
-    @app_commands.describe(canal="Canal onde o catálogo será publicado; por padrão, o canal atual")
-    async def catalogo_roupas(self, interaction: discord.Interaction, canal: discord.TextChannel = None):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
-        target = canal or interaction.channel
-        if not isinstance(target, discord.TextChannel):
-            return await ephemeral(interaction, "Escolha um canal de texto.")
-        embed = discord.Embed(
-            title="👕 Studio Draconic • Loja GTA RP",
-            description=("**Estilo para seu personagem. Identidade para sua cidade.**\n"
-                         "Confira nossas categorias e abra um atendimento para solicitar orçamento.\n\n"
-                         "🧵 **Peças personalizadas** • 👔 **Uniformes e conjuntos** • 🧢 **Acessórios** • 🎨 **Identidade de facção**\n\n"
-                         "Os modelos, valores e prazos são confirmados pela equipe antes do pagamento. Envie referências no ticket para receber um orçamento."),
-            color=discord.Color.from_rgb(125, 75, 220)
-        )
-        for _, (name, description) in STORE_CATEGORIES.items():
-            embed.add_field(name=name, value=description, inline=False)
-        embed.add_field(name="📋 Como comprar", value="1. Clique em **Fazer pedido**.\n2. Informe a cidade, o modelo e a quantidade.\n3. Aguarde a confirmação do orçamento pela equipe.", inline=False)
-        embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
-        await upsert_bot_message(target, embed, StoreOrderView())
-        await ephemeral(interaction, f"Catálogo atualizado em {target.mention}; reutilizei a mensagem existente quando encontrada.")
-
     @app_commands.command(name="loja", description="Mostra os itens disponíveis")
     async def loja(self, interaction):
         embed = discord.Embed(title="🐉 STUDIO DRACONIC • LOJA OFICIAL", color=discord.Color.from_rgb(155, 35, 255))
@@ -756,25 +721,6 @@ class StudioFeatures(commands.Cog):
         settings.setdefault("level_roles", {})[str(nivel)] = cargo.id
         await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
         await interaction.response.send_message(f"Cargo {cargo.mention} configurado para o nível {nivel}.", ephemeral=True)
-
-    @app_commands.command(name="painel_tickets", description="Publica o painel profissional de atendimento")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def painel_tickets(self, interaction: discord.Interaction, canal: discord.TextChannel):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
-        embed = discord.Embed(
-            title="♛  STUDIO DRACONIC",
-            description="**CENTRAL DE ATENDIMENTO**\n\nPrecisa de ajuda com uma compra, encomenda ou parceria? Selecione o assunto no menu abaixo e nossa equipe abrirá um canal privado para você.\n\n**✦ Atendimento organizado**\nCada assunto recebe um ticket próprio para manter tudo claro e fácil de acompanhar.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada terão acesso ao ticket.\n\n**🐉 Experiência STUDIO DRACONIC**  •  Identidade, qualidade e personalidade.",
-            color=discord.Color.from_rgb(155, 35, 255)
-        )
-        embed.add_field(name="🛍️ Comprar Algo", value="Produtos, pacotes e encomendas personalizadas.", inline=True)
-        embed.add_field(name="💬 Dúvidas", value="Preços, prazos e informações antes de comprar.", inline=True)
-        embed.add_field(name="🛠️ Suporte Técnico", value="Ajuda com pedidos, pagamentos ou entregas.", inline=True)
-        embed.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha a opção correspondente no menu.", inline=False)
-        embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
-        await upsert_bot_message(canal, embed, TicketPanelView())
-        await ephemeral(interaction, f"Painel de tickets atualizado em {canal.mention}; sem criar cópia quando já existe.")
 
     @app_commands.command(name="ticket", description="Abre um canal privado de suporte")
     async def ticket(self, interaction, assunto: str = "Suporte"):
@@ -990,14 +936,8 @@ class StudioFeatures(commands.Cog):
 
             target = guild.get_channel(STUDIO_CHANNELS["functioning_channel"])
             if isinstance(target, discord.TextChannel):
-                guide = discord.Embed(title="♛ STUDIO DRACONIC • COMO FUNCIONA", description="**GUIA OFICIAL DO SERVIDOR**\n\nLeia os termos, consulte o catálogo e use os tickets para manter os pedidos organizados.", color=discord.Color.from_rgb(155, 35, 255))
-                guide.add_field(name="01 • Comece por aqui", value="Leia as regras e os termos antes de solicitar um serviço.", inline=False)
-                guide.add_field(name="02 • Catálogo e serviços", value="Consulte os produtos e os preços nos canais oficiais.", inline=False)
-                guide.add_field(name="03 • Atendimento privado", value="Use a central de tickets para compras, dúvidas, suporte e parcerias.", inline=False)
-                guide.add_field(name="04 • Pagamento e entrega", value="Confirme valor e titular antes de pagar. A confirmação Pix é manual e a entrega ocorre após validação.", inline=False)
-                guide.add_field(name="05 • Segurança", value="Nunca compartilhe senhas, tokens ou códigos de autenticação.", inline=False)
-                guide.set_footer(text="🐉 STUDIO DRACONIC • Transparência em cada etapa")
-                await upsert_bot_message(target, guide)
+                tutorial = StoreTutorialView()
+                await upsert_bot_message(target, tutorial._embed(), tutorial)
         log.info("Sistemas extras carregados; instalação dedicada inicializada.")
 
     @commands.Cog.listener()
