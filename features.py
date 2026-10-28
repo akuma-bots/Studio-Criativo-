@@ -877,8 +877,98 @@ class StudioFeatures(commands.Cog):
                 if category:
                     settings["ticket_category"] = category.id
                     changed = True
+            # Cadastro inicial automático dos combos anunciados na tabela oficial.
+            products_key = key(guild.id, "store:products")
+            products = await get_data(self.redis, products_key, {})
+            price_bundles = [
+                ("bundle-1", "1 peça • Avulsa", "R$ 25,00", "Uma peça avulsa; preço conforme tabela oficial."),
+                ("bundle-2", "2 peças • Combo M+F", "R$ 40,00", "Combo de 2 peças M+F; preço promocional."),
+                ("bundle-3", "3 peças • 1 combo + 1 avulsa", "R$ 65,00", "Três peças: um combo e uma avulsa."),
+                ("bundle-4", "4 peças • 2 combos", "R$ 85,00", "Quatro peças: dois combos."),
+                ("bundle-6", "6 peças • 3 combos", "R$ 120,00", "Seis peças: três combos."),
+                ("bundle-7", "7 peças • 3 combos + 1 avulsa", "R$ 150,00", "Sete peças: três combos e uma avulsa."),
+                ("bundle-8", "8 peças • 4 combos", "R$ 170,00", "Oito peças: quatro combos."),
+                ("bundle-9", "9 peças • 4 combos + 1 avulsa", "R$ 180,00", "Nove peças: quatro combos e uma avulsa."),
+            ]
+            seeded = False
+            for pid, name, price, description in price_bundles:
+                if pid not in products:
+                    products[pid] = {"name": name, "price": price, "description": description, "delivery": "", "made_to_order": True, "active": True}
+                    seeded = True
+            if seeded:
+                await set_data(self.redis, products_key, products)
             if changed:
                 await self.bot.put_json(self.bot.settings_key(guild.id), settings)
+            # Publica catálogo e tabela de preços uma única vez, sem duplicar após reinicializações.
+            catalog = guild.get_channel(STUDIO_CHANNELS["store_catalog_channel"])
+            if isinstance(catalog, discord.TextChannel):
+                try:
+                    async for msg in catalog.history(limit=30):
+                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "🐉 KAUANLLZ STUDIO CRIATIVO • CATÁLOGO":
+                            break
+                    else:
+                        embed = discord.Embed(title="🐉 KAUANLLZ STUDIO CRIATIVO • CATÁLOGO", description="**Ideias que viram realidade.**
+Roupas e combos personalizados para seu projeto. Escolha um pacote no seletor abaixo para abrir um ticket privado e combinar referências, prazo e detalhes com a equipe.", color=discord.Color.from_rgb(155, 35, 255))
+                        embed.add_field(name="👕 Pacotes disponíveis", value="1 peça — **R$ 25,00**
+2 peças • Combo M+F — **R$ 40,00**
+3 peças — **R$ 65,00**
+4 peças — **R$ 85,00**
+6 peças — **R$ 120,00**
+7 peças — **R$ 150,00**
+8 peças — **R$ 170,00**
+9 peças — **R$ 180,00**", inline=False)
+                        embed.add_field(name="🛍️ Como pedir", value="1. Escolha o pacote no menu.
+2. O bot abrirá um ticket privado.
+3. A equipe confirma o pedido, o valor e o prazo.
+4. Pague via Pix somente após a confirmação.", inline=False)
+                        embed.set_footer(text="Studio Criativo • Qualidade, confiança e suporte sempre")
+                        await catalog.send(embed=embed, view=StoreOrderView())
+                except discord.HTTPException:
+                    log.exception("Falha ao publicar catálogo automático")
+            products_channel = guild.get_channel(STUDIO_CHANNELS["products_channel"])
+            if isinstance(products_channel, discord.TextChannel):
+                try:
+                    async for msg in products_channel.history(limit=30):
+                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 TABELA DE PREÇOS • STUDIO CRIATIVO":
+                            break
+                    else:
+                        price_embed = discord.Embed(title="💜 TABELA DE PREÇOS • STUDIO CRIATIVO", description="Combos promocionais conforme a tabela oficial enviada pelo proprietário.", color=discord.Color.from_rgb(155, 35, 255))
+                        price_embed.add_field(name="Quantidade", value="1 peça
+2 peças
+3 peças
+4 peças
+6 peças
+7 peças
+8 peças
+9 peças", inline=True)
+                        price_embed.add_field(name="Tipo de compra", value="Avulsa
+Combo M+F
+1 combo + 1 avulsa
+2 combos
+3 combos
+3 combos + 1 avulsa
+4 combos
+4 combos + 1 avulsa", inline=True)
+                        price_embed.add_field(name="Preço normal", value="R$ 25,00
+R$ 50,00
+R$ 75,00
+R$ 100,00
+R$ 150,00
+R$ 180,00
+R$ 200,00
+R$ 230,00", inline=True)
+                        price_embed.add_field(name="Total promocional", value="**R$ 25,00**
+**R$ 40,00**
+**R$ 65,00**
+**R$ 85,00**
+**R$ 120,00**
+**R$ 150,00**
+**R$ 170,00**
+**R$ 180,00**", inline=True)
+                        price_embed.set_footer(text="Para quantidades não listadas, consulte a equipe no ticket. Pagamento Pix confirmado manualmente.")
+                        await products_channel.send(embed=price_embed)
+                except discord.HTTPException:
+                    log.exception("Falha ao publicar tabela de preços")
             target = guild.get_channel(STUDIO_CHANNELS["functioning_channel"])
             if isinstance(target, discord.TextChannel):
                 try:
