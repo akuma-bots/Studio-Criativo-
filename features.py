@@ -87,6 +87,84 @@ class VerificationView(discord.ui.View):
             log.exception("Falha ao registrar verificação")
 
 
+
+class ProductSelect(discord.ui.Select):
+    def __init__(self, guild_id, products):
+        self.guild_id = guild_id
+        options = [discord.SelectOption(label=str(item["name"])[:100], value=str(pid), description=f'{item.get("price", "Consultar")} • {item.get("description", "Produto da loja")}'[:100], emoji="👕") for pid, item in list(products.items())[:25]]
+        super().__init__(placeholder="Escolha o produto que deseja comprar...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        if guild is None:
+            return await ephemeral(interaction, "Use esta opção dentro do servidor.")
+        settings = await interaction.client.get_settings(guild.id)
+        role_id = settings.get("verified_role_id")
+        if role_id and isinstance(interaction.user, discord.Member):
+            role = guild.get_role(int(role_id))
+            if role and role not in interaction.user.roles:
+                return await ephemeral(interaction, "Conclua a verificação antes de comprar.")
+        product_id = self.values[0]
+        products = await get_data(interaction.client.redis, key(guild.id, "store:products"), {})
+        product = products.get(product_id)
+        if not product or not product.get("active", True):
+            return await ephemeral(interaction, "Este produto não está mais disponível. Atualize o catálogo.")
+        existing = discord.utils.find(lambda ch: isinstance(ch, discord.TextChannel) and ch.topic and f"scpro-ticket-owner:{interaction.user.id}" in ch.topic and "scpro-order:true" in ch.topic, guild.text_channels)
+        if existing:
+            return await ephemeral(interaction, f"Você já tem um pedido em andamento: {existing.mention}")
+        category = guild.get_channel(int(settings["ticket_category"])) if settings.get("ticket_category") else None
+        if not isinstance(category, discord.CategoryChannel):
+            category = None
+        me = guild.me
+        if me is None:
+            return await ephemeral(interaction, "Não consegui verificar as permissões do bot.")
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True),
+            me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_channels=True),
+        }
+        staff_role = guild.get_role(int(settings["ticket_staff_role"])) if settings.get("ticket_staff_role") else None
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+        order_id = f"SC-{int(time.time())}-{interaction.user.id % 10000:04d}"
+        channel = await guild.create_text_channel(name=f"pedido-{interaction.user.name[:12]}".lower().replace(" ", "-"), category=category, overwrites=overwrites, topic=f"Pedido {order_id} | scpro-ticket-owner:{interaction.user.id} scpro-order:true", reason=f"Pedido da loja {order_id} aberto por {interaction.user}")
+        pix_key = settings.get("store_pix_key")
+        embed = discord.Embed(title=f"🛍️ Pedido {order_id} • Studio Criativo", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.blurple())
+        embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
+        embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
+        embed.add_field(name="Tipo", value="Por encomenda" if product.get("made_to_order") else "Produto pronto", inline=True)
+        embed.add_field(name="Descrição", value=discord.utils.escape_mentions(product.get("description", "Sem descrição"))[:1024], inline=False)
+        if pix_key:
+            embed.add_field(name="Pagamento via Pix", value=f"Chave Pix: {discord.utils.escape_markdown(str(pix_key))}\nPague somente após a equipe confirmar o valor e as instruções.", inline=False)
+        else:
+            embed.add_field(name="Pagamento via Pix", value="A equipe enviará as instruções de Pix neste ticket.", inline=False)
+        embed.add_field(name="Próximos passos", value="1. Confirme os detalhes com a equipe.\n2. Pague via Pix após a confirmação.\n3. A equipe valida o recebimento e libera a entrega.", inline=False)
+        await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
+        order = {"order_id": order_id, "guild_id": guild.id, "channel_id": channel.id, "user_id": interaction.user.id, "product_id": product_id, "product_name": product["name"], "price": product.get("price", "A confirmar"), "status": "aguardando_pagamento", "created_at": int(time.time())}
+        await set_data(interaction.client.redis, key(guild.id, f"store:order:{order_id}"), order)
+        log_channel_id = settings.get("purchase_log_channel")
+        log_channel = guild.get_channel(int(log_channel_id)) if log_channel_id else None
+        if isinstance(log_channel, discord.TextChannel):
+            log_embed = discord.Embed(title=f"🧾 Novo pedido {order_id}", color=discord.Color.orange())
+            log_embed.add_field(name="Cliente", value=f"{interaction.user.mention} (ID: {interaction.user.id})", inline=False)
+            log_embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
+            log_embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
+            log_embed.add_field(name="Status", value="Aguardando pagamento", inline=True)
+            log_embed.add_field(name="Ticket", value=channel.mention, inline=False)
+            await log_channel.send(embed=log_embed)
+        await ephemeral(interaction, f"Pedido {order_id} criado! Continue no ticket: {channel.mention}")
+        try:
+            await interaction.client.log_event(guild, f"🛍️ Pedido {order_id} aberto por {interaction.user.mention}: {channel.mention}")
+        except Exception:
+            log.exception("Falha ao registrar pedido")
+
+
+class ProductSelectView(discord.ui.View):
+    def __init__(self, guild_id, products):
+        super().__init__(timeout=180)
+        self.add_item(ProductSelect(guild_id, products))
+
+
 class StoreOrderView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -101,6 +179,12 @@ class StoreOrderView(discord.ui.View):
             role = interaction.guild.get_role(int(role_id))
             if role and role not in interaction.user.roles:
                 return await ephemeral(interaction, "Antes de fazer um pedido, conclua a verificação no canal de verificação.")
+        products = await get_data(interaction.client.redis, key(interaction.guild.id, "store:products"), {})
+        products = {pid: item for pid, item in products.items() if item.get("active", True)}
+        if not products:
+            return await ephemeral(interaction, "A loja ainda não tem produtos cadastrados. A equipe deve usar /produto_cadastrar.")
+        await interaction.response.send_message("Selecione o produto para iniciar sua compra por ticket:", view=ProductSelectView(interaction.guild.id, products), ephemeral=True)
+        return
         guild = interaction.guild
         existing = discord.utils.find(lambda ch: isinstance(ch, discord.TextChannel) and ch.topic and f"scpro-ticket-owner:{interaction.user.id}" in ch.topic and "scpro-order:true" in ch.topic, guild.text_channels)
         if existing:
@@ -267,6 +351,106 @@ class StudioFeatures(commands.Cog):
         embed.set_footer(text="Studio Criativo • Verificação oficial")
         await target.send(embed=embed, view=VerificationView())
         await ephemeral(interaction, f"Painel publicado em {target.mention}; cargo de verificado: {cargo_verificado.mention}.")
+
+
+    @app_commands.command(name="configurar_loja_pix", description="Configura Pix e canal de registro de pedidos")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def configurar_loja_pix(self, interaction: discord.Interaction, chave_pix: str, canal_registro: discord.TextChannel):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        if len(chave_pix.strip()) > 200:
+            return await ephemeral(interaction, "A chave Pix é longa demais.")
+        settings = await self.bot.get_settings(interaction.guild.id)
+        settings["store_pix_key"] = chave_pix.strip()
+        settings["purchase_log_channel"] = canal_registro.id
+        await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
+        await ephemeral(interaction, f"Configuração salva. Registros de compras serão enviados para {canal_registro.mention}. Confirme a chave Pix antes de divulgar a loja.")
+
+    @app_commands.command(name="produto_cadastrar", description="Cadastra produto pronto ou por encomenda na loja")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def produto_cadastrar(self, interaction: discord.Interaction, nome: app_commands.Range[str, 2, 80], preco: str, descricao: str, entrega: str, por_encomenda: bool = False):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        if len(preco) > 50 or len(descricao) > 900 or len(entrega) > 1500:
+            return await ephemeral(interaction, "Um dos campos passou do limite. Reduza o tamanho e tente novamente.")
+        if not (preco.strip().startswith("R$") or preco.strip().lower() in ("consultar", "a combinar")):
+            return await ephemeral(interaction, "Informe o preço como R$ 25,00, Consultar ou A combinar.")
+        if not (entrega.startswith("https://") or entrega.startswith("http://") or por_encomenda):
+            return await ephemeral(interaction, "Para produto pronto, informe um link HTTPS de entrega. Para produto por encomenda, marque por_encomenda=True.")
+        products = await get_data(self.redis, key(interaction.guild.id, "store:products"), {})
+        product_id = str(int(time.time()))
+        products[product_id] = {"name": nome.strip(), "price": preco.strip(), "description": descricao.strip(), "delivery": entrega.strip(), "made_to_order": por_encomenda, "active": True}
+        await set_data(self.redis, key(interaction.guild.id, "store:products"), products)
+        await ephemeral(interaction, f"Produto {discord.utils.escape_mentions(nome)} cadastrado com ID {product_id}. Ele aparecerá no seletor de compras do catálogo.")
+
+    @app_commands.command(name="pedido_pago", description="Registra a confirmação manual de um pagamento Pix")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def pedido_pago(self, interaction: discord.Interaction, pedido_id: str):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        order_key = key(interaction.guild.id, f"store:order:{pedido_id}")
+        order = await get_data(self.redis, order_key, None)
+        if not order:
+            return await ephemeral(interaction, "Não encontrei esse pedido.")
+        if order.get("status") not in ("aguardando_pagamento", "aguardando_confirmacao"):
+            return await ephemeral(interaction, f"O pedido está no status {order.get('status')} e não pode ser confirmado agora.")
+        order["status"] = "pago"
+        order["paid_at"] = int(time.time())
+        order["paid_by"] = interaction.user.id
+        await set_data(self.redis, order_key, order)
+        channel = interaction.guild.get_channel(int(order["channel_id"]))
+        if isinstance(channel, discord.TextChannel):
+            await channel.send(f"✅ Pagamento Pix do pedido {pedido_id} confirmado manualmente por {interaction.user.mention}. A equipe pode concluir a entrega.")
+        settings = await self.bot.get_settings(interaction.guild.id)
+        log_channel = interaction.guild.get_channel(int(settings["purchase_log_channel"])) if settings.get("purchase_log_channel") else None
+        if isinstance(log_channel, discord.TextChannel):
+            await log_channel.send(f"✅ Pedido {pedido_id} marcado como pago por {interaction.user.mention}.")
+        await ephemeral(interaction, f"Pedido {pedido_id} marcado como pago. Confirme o recebimento real antes de usar este comando.")
+
+    @app_commands.command(name="pedido_entregar", description="Entrega um produto pronto ou registra encomenda concluída")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def pedido_entregar(self, interaction: discord.Interaction, pedido_id: str, link_ou_instrucoes: str = None):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        order_key = key(interaction.guild.id, f"store:order:{pedido_id}")
+        order = await get_data(self.redis, order_key, None)
+        if not order:
+            return await ephemeral(interaction, "Não encontrei esse pedido.")
+        if order.get("status") != "pago":
+            return await ephemeral(interaction, "A entrega só pode ser feita após o pedido ser marcado como pago.")
+        products = await get_data(self.redis, key(interaction.guild.id, "store:products"), {})
+        product = products.get(order.get("product_id"), {})
+        delivery = (link_ou_instrucoes or product.get("delivery") or "").strip()
+        if not delivery:
+            return await ephemeral(interaction, "Informe o link ou as instruções de entrega.")
+        user = interaction.guild.get_member(int(order["user_id"]))
+        if user is None:
+            try:
+                user = await interaction.guild.fetch_member(int(order["user_id"]))
+            except discord.HTTPException:
+                user = None
+        if user is None:
+            return await ephemeral(interaction, "Não consegui encontrar o cliente no servidor. Verifique se ele ainda é membro.")
+        try:
+            await user.send(embed=discord.Embed(title=f"📦 Seu pedido {pedido_id} foi entregue!", description=f"Produto: {discord.utils.escape_mentions(order['product_name'])}\n\n{discord.utils.escape_mentions(delivery)}\n\nObrigado por comprar no Studio Criativo!", color=discord.Color.green()))
+        except discord.Forbidden:
+            return await ephemeral(interaction, "Não consegui enviar DM ao cliente. Peça para habilitar mensagens diretas e tente novamente.")
+        order["status"] = "entregue"
+        order["delivered_at"] = int(time.time())
+        order["delivered_by"] = interaction.user.id
+        await set_data(self.redis, order_key, order)
+        ticket = interaction.guild.get_channel(int(order["channel_id"]))
+        if isinstance(ticket, discord.TextChannel):
+            await ticket.send(f"📦 Pedido {pedido_id} entregue por {interaction.user.mention}. O produto foi enviado por mensagem privada ao cliente.")
+        settings = await self.bot.get_settings(interaction.guild.id)
+        log_channel = interaction.guild.get_channel(int(settings["purchase_log_channel"])) if settings.get("purchase_log_channel") else None
+        if isinstance(log_channel, discord.TextChannel):
+            await log_channel.send(f"📦 Pedido {pedido_id} entregue a <@{order['user_id']}>. Responsável: {interaction.user.mention}.")
+        await ephemeral(interaction, f"Entrega do pedido {pedido_id} concluída e enviada por DM.")
 
     @app_commands.command(name="catalogo_roupas", description="Publica o catálogo da loja de roupas GTA RP")
     @app_commands.describe(canal="Canal onde o catálogo será publicado; por padrão, o canal atual")
