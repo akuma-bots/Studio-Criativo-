@@ -285,7 +285,7 @@ class StoreOrderView(discord.ui.View):
                          "• Produto ou categoria desejada\n• Servidor/cidade de GTA RP\n"
                          "• Quantidade e detalhes do modelo\n• Referências ou imagens, se tiver\n\n"
                          "A equipe confirma preço, prazo e forma de pagamento neste ticket. **Não envie senhas ou dados de acesso.**"),
-            color=discord.Color.blurple()
+            color=discord.Color.from_rgb(155, 35, 255)
         )
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         await ephemeral(interaction, f"Seu atendimento foi aberto: {channel.mention}")
@@ -294,6 +294,16 @@ class StoreOrderView(discord.ui.View):
         except Exception:
             log.exception("Falha ao registrar pedido")
 
+
+    @discord.ui.button(label="Consultar preços", style=discord.ButtonStyle.secondary, emoji="💜", custom_id="scpro:store:prices")
+    async def show_prices(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="♛ KAUANLLZ • TABELA DE PREÇOS",
+            description="**COMBOS PROMOCIONAIS**\\n\\n**01 peça** — R$ 25,00\\n**02 peças** — R$ 40,00\\n**03 peças** — R$ 65,00\\n**04 peças** — R$ 85,00\\n**06 peças** — R$ 120,00\\n**07 peças** — R$ 150,00\\n**08 peças** — R$ 170,00\\n**09 peças** — R$ 180,00\\n\\nPara quantidades diferentes, consulte a equipe no ticket. O valor e o prazo serão confirmados antes do pagamento.",
+            color=discord.Color.from_rgb(155, 35, 255),
+        )
+        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Preto & Roxo Neon")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 class TicketPanelView(discord.ui.View):
@@ -334,7 +344,7 @@ class TicketPanelView(discord.ui.View):
             description=f"Olá {interaction.user.mention}! Explique sua dúvida ou problema abaixo.\n\n**Para compras:** use o catálogo de roupas e selecione o produto para criar um pedido com registro de compra.\n**Para suporte:** envie os detalhes e anexos necessários.\n\nNão envie senhas ou códigos de autenticação.",
             color=discord.Color.blurple()
         )
-        embed.set_footer(text="Studio Criativo • Atendimento privado")
+        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Atendimento privado")
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         await ephemeral(interaction, f"Seu ticket foi criado: {channel.mention}")
         await feature_log(interaction.client, guild, f"Ticket de suporte aberto por {interaction.user.mention}: {channel.mention}")
