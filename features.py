@@ -310,14 +310,40 @@ class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Atendimento", style=discord.ButtonStyle.primary, emoji="💜", custom_id="scpro:ticket:open")
-    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.select(
+        placeholder="Escolha o assunto do atendimento",
+        min_values=1,
+        max_values=1,
+        custom_id="scpro:ticket:reason",
+        options=[
+            discord.SelectOption(label="Comprar Algo", description="Comprar um item, pacote ou encomenda personalizada.", emoji="🛍️", value="compra"),
+            discord.SelectOption(label="Dúvidas", description="Pergunte sobre preços, prazos ou como funciona.", emoji="💬", value="duvidas"),
+            discord.SelectOption(label="Suporte Técnico", description="Problemas com pagamento, pedido ou entrega.", emoji="🛠️", value="suporte"),
+            discord.SelectOption(label="Resgatar Sorteio", description="Solicite seu prêmio de um sorteio vencido.", emoji="🎁", value="sorteio"),
+            discord.SelectOption(label="Parceria", description="Propostas de parceria e divulgação.", emoji="🤝", value="parceria"),
+            discord.SelectOption(label="Seja Patrocinado", description="Apresente seu canal ou projeto para patrocínio.", emoji="🎥", value="patrocinio"),
+        ],
+    )
+    async def choose_reason(self, interaction: discord.Interaction, select: discord.ui.Select):
         guild = interaction.guild
         if guild is None:
             return await ephemeral(interaction, "Use este painel dentro do servidor.")
-        existing = discord.utils.find(lambda ch: isinstance(ch, discord.TextChannel) and ch.topic and f"scpro-ticket-owner:{interaction.user.id}" in ch.topic, guild.text_channels)
+        reason_map = {
+            "compra": ("🛍️ Comprar Algo", "Informe o produto ou pacote desejado, a quantidade e referências. A equipe confirmará preço e prazo antes do pagamento."),
+            "duvidas": ("💬 Dúvidas", "Conte sua dúvida sobre preços, prazos, personalização ou funcionamento da loja."),
+            "suporte": ("🛠️ Suporte Técnico", "Explique o problema com o pedido, pagamento ou entrega. Inclua o número do pedido, se tiver."),
+            "sorteio": ("🎁 Resgatar Sorteio", "Informe o sorteio ganho e envie as informações públicas necessárias para confirmar o prêmio."),
+            "parceria": ("🤝 Parceria", "Apresente seu servidor/projeto, público, proposta e forma de divulgação."),
+            "patrocinio": ("🎥 Seja Patrocinado", "Compartilhe seu canal, plataforma, métricas públicas e a proposta de patrocínio."),
+        }
+        selected = select.values[0]
+        title, guidance = reason_map.get(selected, ("💬 Atendimento", "Descreva como a equipe pode ajudar."))
+        existing = discord.utils.find(
+            lambda ch: isinstance(ch, discord.TextChannel) and ch.topic and f"scpro-ticket-owner:{interaction.user.id}" in ch.topic,
+            guild.text_channels,
+        )
         if existing:
-            return await ephemeral(interaction, f"Você já tem um ticket aberto: {existing.mention}")
+            return await ephemeral(interaction, f"Você já tem um atendimento aberto: {existing.mention}")
         settings = await interaction.client.get_settings(guild.id)
         category = guild.get_channel(int(settings["ticket_category"])) if settings.get("ticket_category") else None
         if not isinstance(category, discord.CategoryChannel):
@@ -332,23 +358,26 @@ class TicketPanelView(discord.ui.View):
         }
         staff_role = guild.get_role(int(settings["ticket_staff_role"])) if settings.get("ticket_staff_role") else None
         if staff_role:
-            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
+        slug = selected if selected in {"compra", "duvidas", "suporte", "sorteio", "parceria", "patrocinio"} else "atendimento"
+        safe_name = "".join(ch for ch in interaction.user.name.lower() if ch.isalnum() or ch in "-_")[:18] or "cliente"
         channel = await guild.create_text_channel(
-            name=f"ticket-{interaction.user.name[:12]}".lower().replace(" ", "-"),
-            category=category, overwrites=overwrites,
-            topic=f"Ticket de suporte | scpro-ticket-owner:{interaction.user.id}",
-            reason=f"Ticket aberto por {interaction.user}"
+            name=f"{slug}-{safe_name}",
+            category=category,
+            overwrites=overwrites,
+            topic=f"Atendimento: {title} | scpro-ticket-owner:{interaction.user.id}",
+            reason=f"Ticket de {title} aberto por {interaction.user}",
         )
         embed = discord.Embed(
-            title="✦ KAUANLLZ STUDIO CRIATIVO  •  ATENDIMENTO",
-            description=f"Olá {interaction.user.mention}! Explique sua dúvida ou problema abaixo.\n\n**Para compras:** use o catálogo de roupas e selecione o produto para criar um pedido com registro de compra.\n**Para suporte:** envie os detalhes e anexos necessários.\n\nNão envie senhas ou códigos de autenticação.",
-            color=discord.Color.blurple()
+            title=f"🐉 KAUANLLZ STUDIO  •  {title.upper()}",
+            description=f"Olá {interaction.user.mention}, seu atendimento privado está pronto.\n\n{guidance}\n\n**COMO FUNCIONA**\n**01** Envie os detalhes necessários.\n**02** Aguarde a equipe responder neste canal.\n**03** Confirme as condições antes de realizar pagamentos.\n\n🔒 Este canal é privado. Nunca compartilhe senhas, tokens ou códigos de autenticação.",
+            color=discord.Color.from_rgb(155, 35, 255),
         )
-        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Atendimento privado")
+        embed.add_field(name="✦ Atendimento organizado", value="Mantenha todas as informações deste assunto neste ticket para facilitar o acompanhamento.", inline=False)
+        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Preto & Roxo Neon")
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
-        await ephemeral(interaction, f"Seu ticket foi criado: {channel.mention}")
-        await feature_log(interaction.client, guild, f"Ticket de suporte aberto por {interaction.user.mention}: {channel.mention}")
-
+        await ephemeral(interaction, f"Seu atendimento de {title} foi criado: {channel.mention}")
+        await feature_log(interaction.client, guild, f"Ticket ({title}) aberto por {interaction.user.mention}: {channel.mention}")
 
 class TicketView(discord.ui.View):
     def __init__(self):
@@ -715,11 +744,15 @@ class StudioFeatures(commands.Cog):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando dentro de um servidor.")
         embed = discord.Embed(
-            title="🎫 Central de Atendimento • Studio Criativo",
-            description="Precisa de ajuda com a loja, uma encomenda ou outro assunto?\n\n**Abra um ticket** para conversar em particular com a equipe.\n\n• Atendimento organizado e privado\n• Histórico mantido no canal do ticket\n• Para comprar roupas GTA RP, utilize também o catálogo da loja\n\nNão envie senhas, tokens ou códigos de autenticação.",
-            color=discord.Color.from_rgb(125, 75, 220)
+            title="♛  KAUANLLZ STUDIO CRIATIVO",
+            description="**CENTRAL DE ATENDIMENTO**\n\nPrecisa de ajuda com uma compra, encomenda ou parceria? Selecione o assunto no menu abaixo e nossa equipe abrirá um canal privado para você.\n\n**✦ Atendimento organizado**\nCada assunto recebe um ticket próprio para manter tudo claro e fácil de acompanhar.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada terão acesso ao ticket.\n\n**🐉 Experiência KAUANLLZ**  •  Identidade, qualidade e personalidade.",
+            color=discord.Color.from_rgb(155, 35, 255)
         )
-        embed.set_footer(text="Studio Criativo • Atendimento oficial")
+        embed.add_field(name="🛍️ Comprar Algo", value="Produtos, pacotes e encomendas personalizadas.", inline=True)
+        embed.add_field(name="💬 Dúvidas", value="Preços, prazos e informações antes de comprar.", inline=True)
+        embed.add_field(name="🛠️ Suporte Técnico", value="Ajuda com pedidos, pagamentos ou entregas.", inline=True)
+        embed.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha a opção correspondente no menu.", inline=False)
+        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Preto & Roxo Neon")
         await canal.send(embed=embed, view=TicketPanelView())
         await ephemeral(interaction, f"Painel de tickets publicado em {canal.mention}.")
 
