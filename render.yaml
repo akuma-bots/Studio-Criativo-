@@ -3,7 +3,7 @@ services:
     name: studio-criativo-pro
     runtime: python
     plan: starter
-    region: oregon
+    region: virginia
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     disk:
