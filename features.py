@@ -66,15 +66,35 @@ async def feature_log(bot, guild, message):
         log.exception("Falha ao registrar evento")
 
 
+def panel_topic(title):
+    """Identificador semântico estável para reconhecer painéis antigos com títulos diferentes."""
+    normalized = (title or "").casefold()
+    if any(word in normalized for word in ("central de atendimento", "painel de tickets", "atendimento oficial")):
+        return "ticket-panel"
+    if any(word in normalized for word in ("catálogo", "catalogo", "loja gta rp")):
+        return "catalog"
+    if any(word in normalized for word in ("tabela", "preços", "precos")):
+        return "prices"
+    if any(word in normalized for word in ("como funciona", "funcionamento")):
+        return "guide"
+    if "guia da loja" in normalized:
+        return "tutorial"
+    return None
+
+
 async def upsert_bot_message(channel, embed, view=None, limit=200):
-    """Mantém uma única mensagem fixa por título: atualiza a existente e remove duplicatas antigas."""
+    """Mantém uma única mensagem fixa por assunto: atualiza a existente e remove duplicatas antigas."""
     if not isinstance(channel, discord.TextChannel) or channel.guild.me is None:
         return None
     title = embed.title
+    topic = panel_topic(title)
     try:
         matches = []
         async for message in channel.history(limit=limit, oldest_first=False):
-            if message.author.id == channel.guild.me.id and message.embeds and message.embeds[0].title == title:
+            if message.author.id != channel.guild.me.id or not message.embeds:
+                continue
+            old_title = message.embeds[0].title
+            if old_title == title or (topic and panel_topic(old_title) == topic):
                 matches.append(message)
         if matches:
             # Mantém a mensagem mais recente e limpa duplicatas criadas por versões antigas.
