@@ -184,6 +184,7 @@ async def ajuda(interaction: discord.Interaction):
         "**Experiência:** /nivel, /ranking_xp, /missao, /conquistas, /cargo_nivel\n"
         "**Comunidade:** /sugerir, /votacao, /sorteio, /ticket\n"
         "**Loja GTA RP:** /catalogo_roupas, /tutorial_loja, /produto_cadastrar, /configurar_loja_pix\n"
+        "**Tickets:** /painel_tickets (publica painel), /ticket\n"
         "**Pedidos Pix:** /pedido_pago, /pedido_entregar (equipe)\n"
         "**Verificação:** /configurar_verificacao (painel por botão)\n"
         "**Configuração:** /configurar, /configurar_sistemas, /autorole\n"
