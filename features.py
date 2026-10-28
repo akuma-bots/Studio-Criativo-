@@ -20,6 +20,8 @@ STUDIO_CHANNELS = {
     "store_catalog_channel": 1557572244383989760,
     "products_channel": 1557573029238800488,
     "purchase_log_channel": 1565016859131121725,
+    "ticket_channel": 1557630942854512650,
+    "ticket_feedback_channel": 1557568292644716636,
     "ticket_log_channel": 1557630941596356671,
     "moderation_log_channel": 1565018251124146369,
     "log_channel": 1565018509694738502,
@@ -379,6 +381,67 @@ class TicketPanelView(discord.ui.View):
         await ephemeral(interaction, f"Seu atendimento de {title} foi criado: {channel.mention}")
         await feature_log(interaction.client, guild, f"Ticket ({title}) aberto por {interaction.user.mention}: {channel.mention}")
 
+class TicketFeedbackModal(discord.ui.Modal, title="Avalie seu atendimento"):
+    rating = discord.ui.TextInput(label="Nota de 1 a 5", placeholder="5", min_length=1, max_length=1, required=True)
+    comment = discord.ui.TextInput(label="Comentário (opcional)", placeholder="Conte como foi sua experiência...", style=discord.TextStyle.paragraph, max_length=800, required=False)
+
+    def __init__(self, ticket_channel: discord.TextChannel, owner_id: int):
+        super().__init__(timeout=300, custom_id="scpro:ticket:feedback")
+        self.ticket_channel = ticket_channel
+        self.owner_id = owner_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        channel = self.ticket_channel
+        guild = channel.guild
+        try:
+            rating = int(str(self.rating.value).strip())
+        except ValueError:
+            return await ephemeral(interaction, "Informe uma nota entre 1 e 5.")
+        if rating < 1 or rating > 5:
+            return await ephemeral(interaction, "A nota deve ser de 1 a 5.")
+        comment = discord.utils.escape_mentions(str(self.comment.value or "").strip()) or "Sem comentário."
+        feedback_channel = guild.get_channel(STUDIO_CHANNELS["ticket_feedback_channel"])
+        if isinstance(feedback_channel, discord.TextChannel):
+            embed = discord.Embed(
+                title="💜 NOVO FEEDBACK DE ATENDIMENTO",
+                description=f"**Cliente:** <@{self.owner_id}>\n**Avaliação:** {'⭐' * rating} ({rating}/5)\n**Ticket:** #{channel.name}\n\n**Comentário**\n{comment}",
+                color=discord.Color.from_rgb(155, 35, 255),
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Experiência do cliente")
+            await feedback_channel.send(embed=embed)
+        history_channel = guild.get_channel(STUDIO_CHANNELS["ticket_log_channel"])
+        if isinstance(history_channel, discord.TextChannel):
+            transcript_lines = []
+            try:
+                async for msg in channel.history(limit=60, oldest_first=True):
+                    body = discord.utils.escape_mentions(msg.content or "")
+                    if msg.embeds:
+                        body += " [embed: " + (msg.embeds[0].title or "mensagem incorporada") + "]"
+                    if msg.attachments:
+                        body += " [anexos: " + ", ".join(a.filename for a in msg.attachments) + "]"
+                    transcript_lines.append(f"{msg.created_at.strftime('%d/%m/%Y %H:%M')} | {msg.author}: {body}")
+            except discord.HTTPException:
+                transcript_lines.append("Não foi possível recuperar todo o histórico.")
+            transcript = "\n".join(transcript_lines) or "Ticket sem mensagens."
+            if len(transcript) > 3500:
+                transcript = transcript[:3500] + "\n… histórico truncado."
+            embed = discord.Embed(
+                title="📁 ATENDIMENTO ENCERRADO • HISTÓRICO",
+                description=f"**Canal:** #{channel.name}\n**Cliente:** <@{self.owner_id}>\n**Encerrado por:** {interaction.user.mention}\n**Feedback:** {'⭐' * rating} ({rating}/5)\n\n**Transcrição recente**\n{transcript}",
+                color=discord.Color.from_rgb(155, 35, 255),
+                timestamp=datetime.now(timezone.utc),
+            )
+            embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Histórico de atendimento")
+            await history_channel.send(embed=embed)
+        await ephemeral(interaction, "Obrigado! Seu feedback foi registrado. Este ticket será encerrado.")
+        await asyncio.sleep(2)
+        try:
+            await channel.delete(reason=f"Ticket encerrado com feedback por {interaction.user}")
+        except discord.HTTPException:
+            log.exception("Falha ao excluir ticket após feedback")
+
+
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -396,13 +459,7 @@ class TicketView(discord.ui.View):
         allowed = member.id == owner_id or (isinstance(member, discord.Member) and member.guild_permissions.manage_channels)
         if not allowed:
             return await ephemeral(interaction, "Só quem abriu o ticket ou a equipe pode fechá-lo.")
-        await interaction.response.send_message("Ticket será fechado em 3 segundos.")
-        await asyncio.sleep(3)
-        try:
-            await channel.delete(reason=f"Ticket fechado por {interaction.user}")
-        except discord.HTTPException:
-            log.exception("Falha ao excluir ticket")
-
+        await interaction.response.send_modal(TicketFeedbackModal(channel, owner_id))
 
 class GiveawayView(discord.ui.View):
     def __init__(self):
