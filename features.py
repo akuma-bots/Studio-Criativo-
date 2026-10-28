@@ -262,7 +262,7 @@ class StudioFeatures(commands.Cog):
         await interaction.response.send_message(f"Cargo {cargo.mention} configurado para o nível {nivel}.", ephemeral=True)
 
     @app_commands.command(name="ticket", description="Abre um canal privado de suporte")
-    async def ticket(self, interaction, assunto: app_commands.Range[str, 3, 80] = "Suporte"):
+    async def ticket(self, interaction, assunto: str = "Suporte"):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando em um servidor.")
         guild = interaction.guild
@@ -296,7 +296,7 @@ class StudioFeatures(commands.Cog):
         await feature_log(self.bot, guild, f"Ticket aberto por {interaction.user.mention}: {channel.mention}")
 
     @app_commands.command(name="sugerir", description="Envia uma sugestão para a comunidade")
-    async def sugerir(self, interaction, texto: app_commands.Range[str, 10, 1000]):
+    async def sugerir(self, interaction, texto: str):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando em um servidor.")
         channel = await self.channel_for(interaction.guild, "suggestion_channel")
@@ -314,7 +314,7 @@ class StudioFeatures(commands.Cog):
         await interaction.response.send_message(f"Sugestão enviada em {channel.mention}.", ephemeral=True)
 
     @app_commands.command(name="votacao", description="Cria uma votação com até 5 opções")
-    async def votacao(self, interaction, pergunta: app_commands.Range[str, 5, 250], opcoes: app_commands.Range[str, 3, 500]):
+    async def votacao(self, interaction, pergunta: str, opcoes: str):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando em um servidor.")
         choices = [discord.utils.escape_mentions(x.strip()) for x in opcoes.split("|") if x.strip()]
@@ -331,7 +331,7 @@ class StudioFeatures(commands.Cog):
     @app_commands.command(name="sorteio", description="Cria um sorteio com participação por botão")
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def sorteio(self, interaction, premio: app_commands.Range[str, 3, 150], minutos: app_commands.Range[int, 1, 10080], ganhadores: app_commands.Range[int, 1, 10] = 1):
+    async def sorteio(self, interaction, premio: str, minutos: app_commands.Range[int, 1, 10080], ganhadores: app_commands.Range[int, 1, 10] = 1):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando em um servidor.")
         channel = await self.channel_for(interaction.guild, "giveaway_channel")
