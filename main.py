@@ -78,15 +78,42 @@ async def save_user(guild_id: int, user_id: int, user: dict) -> None:
 
 
 async def log_event(guild: discord.Guild, message: str) -> None:
+    """Registra eventos em um embed padronizado do Studio Draconic."""
     settings = await get_settings(guild.id)
-    channel_id = settings.get("log_channel")
-    if channel_id:
-        channel = guild.get_channel(int(channel_id))
-        if isinstance(channel, discord.TextChannel):
-            try:
-                await channel.send(message[:1900])
-            except discord.HTTPException:
-                logging.exception("Falha ao enviar log")
+    channel_id = settings.get("log_channel") or 1565018509694738502
+    channel = guild.get_channel(int(channel_id)) if channel_id else None
+    if not isinstance(channel, discord.TextChannel):
+        channel = guild.get_channel(1565018509694738502)
+    if not isinstance(channel, discord.TextChannel):
+        return
+
+    raw = str(message or "Evento sem detalhes")
+    lowered = raw.lower()
+    if any(word in lowered for word in ("banido", "expulso", "timeout", "moderação", "anti-spam", "anti-raid", "raid", "menções excessivas")):
+        title, color, category, icon = "REGISTRO DE MODERAÇÃO", discord.Color.from_rgb(235, 65, 90), "SEGURANÇA", "🛡️"
+    elif any(word in lowered for word in ("pedido", "compra", "pagamento", "pago", "entregue", "produto")):
+        title, color, category, icon = "REGISTRO DA LOJA", discord.Color.from_rgb(155, 35, 255), "COMERCIAL", "🛍️"
+    elif any(word in lowered for word in ("ticket", "atendimento", "feedback")):
+        title, color, category, icon = "REGISTRO DE ATENDIMENTO", discord.Color.from_rgb(155, 35, 255), "SUPORTE", "🎫"
+    elif any(word in lowered for word in ("entrou", "saiu", "verificação", "verificacao")):
+        title, color, category, icon = "ATIVIDADE DA COMUNIDADE", discord.Color.from_rgb(90, 130, 255), "MEMBROS", "👥"
+    else:
+        title, color, category, icon = "REGISTRO DO SISTEMA", discord.Color.from_rgb(155, 35, 255), "SISTEMA", "🐉"
+
+    clean_message = discord.utils.escape_mentions(raw)
+    embed = discord.Embed(
+        title=f"{icon}  {title}",
+        description=clean_message[:3500],
+        color=color,
+        timestamp=datetime.now(timezone.utc),
+    )
+    embed.add_field(name="Servidor", value=discord.utils.escape_markdown(guild.name)[:200], inline=True)
+    embed.add_field(name="Categoria", value=category, inline=True)
+    embed.set_footer(text="STUDIO DRACONIC • Central de registros", icon_url=guild.icon.url if guild.icon else discord.Embed.Empty)
+    try:
+        await channel.send(embed=embed)
+    except discord.HTTPException:
+        logging.exception("Falha ao enviar log do Studio Draconic")
 
 
 class StudioBot(commands.Bot):
