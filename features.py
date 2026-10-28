@@ -74,39 +74,6 @@ STORE_CATEGORIES = {
 }
 
 
-class VerificationView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="Verificar acesso", style=discord.ButtonStyle.primary, emoji="🐉", custom_id="scpro:verify:member")
-    async def verify_member(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
-            return await ephemeral(interaction, "Use esta verificação dentro do servidor.")
-        settings = await interaction.client.get_settings(interaction.guild.id)
-        role_id = settings.get("verified_role_id")
-        if not role_id:
-            return await ephemeral(interaction, "A verificação ainda não foi configurada. Peça à equipe para usar /configurar_verificacao.")
-        role = interaction.guild.get_role(int(role_id))
-        me = interaction.guild.me
-        if role is None or me is None or role >= me.top_role:
-            return await ephemeral(interaction, "Não consegui atribuir o cargo. A equipe precisa revisar a hierarquia de cargos do bot.")
-        if role in interaction.user.roles:
-            return await ephemeral(interaction, "Você já está verificado! ✅")
-        try:
-            await interaction.user.add_roles(role, reason="Verificação pelo painel do Studio Draconic")
-        except discord.Forbidden:
-            return await ephemeral(interaction, "Não tenho permissão para atribuir o cargo de verificado.")
-        except discord.HTTPException:
-            return await ephemeral(interaction, "A verificação falhou temporariamente. Tente novamente.")
-        await ephemeral(interaction, f"✅ Verificação concluída! Você recebeu {role.mention}. Bem-vindo(a)!")
-        try:
-            await interaction.client.log_event(interaction.guild, f"🛡️ {interaction.user.mention} concluiu a verificação.")
-        except Exception:
-            log.exception("Falha ao registrar verificação")
-
-
-
-
 class StoreTutorialView(discord.ui.View):
     PAGES = [
         ("👋 Bem-vindo à loja", "O **Studio Draconic** cria roupas, uniformes e peças personalizadas para servidores de **GTA RP**. Leia as etapas antes de iniciar seu pedido.\n\n🔒 Nunca envie senhas, códigos de autenticação ou acesso à sua conta."),
@@ -166,11 +133,6 @@ class ProductSelect(discord.ui.Select):
         if guild is None:
             return await ephemeral(interaction, "Use esta opção dentro do servidor.")
         settings = await interaction.client.get_settings(guild.id)
-        role_id = settings.get("verified_role_id")
-        if role_id and isinstance(interaction.user, discord.Member):
-            role = guild.get_role(int(role_id))
-            if role and role not in interaction.user.roles:
-                return await ephemeral(interaction, "Conclua a verificação antes de comprar.")
         product_id = self.values[0]
         products = await get_data(interaction.client.redis, key(guild.id, "store:products"), {})
         product = products.get(product_id)
@@ -511,41 +473,6 @@ class StudioFeatures(commands.Cog):
         channel = interaction.guild.get_channel(int(channel_id)) if channel_id else None
         destination = channel.mention if isinstance(channel, discord.TextChannel) else "não configurado"
         await ephemeral(interaction, "🛡️ **Automoderação básica ativa**\n• Anti-spam: 6 mensagens em 8 segundos, com timeout de 5 minutos.\n• Anti-raid: alerta para 8 ou mais entradas em 20 segundos.\n• Filtro de mensagens repetidas e menções excessivas: ativo após a atualização.\n• Canal de moderação: " + destination)
-
-    @app_commands.command(name="configurar_verificacao", description="Configura o cargo de verificado e publica o painel")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def configurar_verificacao(self, interaction: discord.Interaction, cargo_verificado: discord.Role, canal: discord.TextChannel = None):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
-        guild = interaction.guild
-        me = guild.me
-        if cargo_verificado.is_default() or cargo_verificado.managed or me is None or cargo_verificado >= me.top_role:
-            return await ephemeral(interaction, "O cargo escolhido precisa estar abaixo do cargo mais alto do bot e não pode ser gerenciado.")
-        settings = await self.bot.get_settings(guild.id)
-        settings["verified_role_id"] = cargo_verificado.id
-        if canal is not None:
-            settings["verification_channel"] = canal.id
-        await self.bot.put_json(self.bot.settings_key(guild.id), settings)
-        target = canal or interaction.channel
-        if not isinstance(target, discord.TextChannel):
-            return await ephemeral(interaction, "Escolha um canal de texto para publicar o painel.")
-        embed = discord.Embed(
-            title="🛡️ Verificação de acesso",
-            description=("Para liberar o acesso à comunidade do **Studio Draconic**, clique no botão abaixo.\n\n"
-                         "**Como funciona**\n"
-                         "1. Clique em **Verificar-se**.\n"
-                         "2. O bot atribuirá seu cargo de acesso.\n"
-                         "3. Os canais liberados pelo servidor ficarão disponíveis conforme as permissões.\n\n"
-                         "🔐 A verificação acontece dentro do Discord. **Nunca pedimos sua senha, token ou login de GTA.**"),
-            color=discord.Color.blurple()
-        )
-        embed.set_footer(text="Studio Draconic • Verificação oficial")
-        await target.send(embed=embed, view=VerificationView())
-        await ephemeral(interaction, f"Painel publicado em {target.mention}; cargo de verificado: {cargo_verificado.mention}.")
-
-
-    # As chaves Pix são constantes desta instalação e não têm comando de configuração.
 
     @app_commands.command(name="produto_cadastrar", description="Cadastra produto pronto ou por encomenda na loja")
     @app_commands.default_permissions(manage_guild=True)
@@ -1161,5 +1088,4 @@ async def setup(bot):
     bot.add_view(TicketView())
     bot.add_view(TicketPanelView())
     bot.add_view(GiveawayView())
-    bot.add_view(VerificationView())
     bot.add_view(StoreOrderView())
