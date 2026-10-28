@@ -183,7 +183,7 @@ async def ajuda(interaction: discord.Interaction):
         "**Economia:** /saldo, /diario, /trabalhar, /pagar, /ranking, /loja, /comprar, /inventario\n"
         "**Experiência:** /nivel, /ranking_xp, /missao, /conquistas, /cargo_nivel\n"
         "**Comunidade:** /sugerir, /votacao, /sorteio, /ticket\n"
-        "**Loja GTA RP:** /catalogo_roupas, /produto_cadastrar, /configurar_loja_pix\n"
+        "**Loja GTA RP:** /catalogo_roupas, /tutorial_loja, /produto_cadastrar, /configurar_loja_pix\n"
         "**Pedidos Pix:** /pedido_pago, /pedido_entregar (equipe)\n"
         "**Verificação:** /configurar_verificacao (painel por botão)\n"
         "**Configuração:** /configurar, /configurar_sistemas, /autorole\n"
