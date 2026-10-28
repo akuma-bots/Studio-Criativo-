@@ -155,6 +155,17 @@ async def on_message(message: discord.Message):
             user["xp"] = int(user["xp"]) + random.randint(8, 15)
             user["level"] = int((user["xp"] / 100) ** 0.5)
             await save_user(message.guild.id, message.author.id, user)
+            settings = await get_settings(message.guild.id)
+            level_roles = settings.get("level_roles", {})
+            eligible = [(int(level), int(role_id)) for level, role_id in level_roles.items() if int(user["level"]) >= int(level)]
+            if eligible and isinstance(message.author, discord.Member):
+                target_level, target_role_id = max(eligible, key=lambda item: item[0])
+                target_role = message.guild.get_role(target_role_id)
+                if target_role and target_role not in message.author.roles and message.guild.me and target_role < message.guild.me.top_role:
+                    try:
+                        await message.author.add_roles(target_role, reason=f"Recompensa por alcançar nível {target_level}")
+                    except discord.HTTPException:
+                        logging.exception("Falha ao atribuir cargo por nível")
             if user["level"] > old_level:
                 await message.channel.send(
                     f"🎉 {message.author.mention} subiu para o nível **{user['level']}**!"
