@@ -120,6 +120,7 @@ class StudioFeatures(commands.Cog):
         sorteios: discord.TextChannel = None,
         economia: discord.TextChannel = None,
         niveis: discord.TextChannel = None,
+        equipe_ticket: discord.Role = None,
     ):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando em um servidor.")
@@ -128,7 +129,7 @@ class StudioFeatures(commands.Cog):
             "welcome_channel": boas_vindas, "log_channel": logs,
             "ticket_category": tickets, "suggestion_channel": sugestoes,
             "giveaway_channel": sorteios, "economy_channel": economia,
-            "level_channel": niveis,
+            "level_channel": niveis, "ticket_staff_role": equipe_ticket,
         }
         changed = []
         for name, channel in values.items():
