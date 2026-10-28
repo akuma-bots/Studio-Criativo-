@@ -400,85 +400,9 @@ class StudioFeatures(commands.Cog):
         channel_id = settings.get(setting)
         return guild.get_channel(int(channel_id)) if channel_id else None
 
-    @app_commands.command(name="configurar_sistemas", description="Salva os canais padrão dos sistemas")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def configurar_sistemas(
-        self, interaction: discord.Interaction,
-        boas_vindas: discord.TextChannel = None,
-        logs: discord.TextChannel = None,
-        tickets: discord.CategoryChannel = None,
-        sugestoes: discord.TextChannel = None,
-        votacoes: discord.TextChannel = None,
-        sorteios: discord.TextChannel = None,
-        economia: discord.TextChannel = None,
-        niveis: discord.TextChannel = None,
-        equipe_ticket: discord.Role = None,
-    ):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando em um servidor.")
-        settings = await self.bot.get_settings(interaction.guild.id)
-        values = {
-            "welcome_channel": boas_vindas, "log_channel": logs,
-            "ticket_category": tickets, "suggestion_channel": sugestoes,
-            "poll_channel": votacoes, "giveaway_channel": sorteios, "economy_channel": economia,
-            "level_channel": niveis, "ticket_staff_role": equipe_ticket,
-        }
-        changed = []
-        for name, channel in values.items():
-            if channel is not None:
-                settings[name] = channel.id
-                changed.append(f"• {name}: {channel.mention if isinstance(channel, discord.TextChannel) else channel.name}")
-        if not changed:
-            return await ephemeral(interaction, "Informe pelo menos um canal ou categoria. Os outros valores serão mantidos.")
-        await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
-        await interaction.response.send_message("Canais padrão salvos no Upstash Redis:\n" + "\n".join(changed), ephemeral=True)
+    # configurar_sistemas removido: canais definidos automaticamente para esta instalação.
 
-    @app_commands.command(name="configurar_canais_studio", description="Configura os canais informados e publica Funcionamentos")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def configurar_canais_studio(self, interaction: discord.Interaction):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando dentro do servidor.")
-        guild = interaction.guild
-        channel_ids = {
-            "welcome_channel": 1557571732624113745,
-            "functioning_channel": 1557572016188432474,
-            "terms_channel": 1557572074338390077,
-            "booster_channel": 1557572137781567578,
-            "store_catalog_channel": 1557572244383989760,
-            "products_channel": 1557573029238800488,
-            "purchase_log_channel": 1565016859131121725,
-            "ticket_log_channel": 1557630941596356671,
-            "moderation_log_channel": 1565018251124146369,
-            "log_channel": 1565018509694738502,
-        }
-        resolved = {name: guild.get_channel(cid) for name, cid in channel_ids.items()}
-        missing = [str(cid) for name, cid in channel_ids.items() if resolved[name] is None]
-        settings = await self.bot.get_settings(guild.id)
-        for name, channel in resolved.items():
-            if isinstance(channel, discord.TextChannel):
-                settings[name] = channel.id
-        await self.bot.put_json(self.bot.settings_key(guild.id), settings)
-        target = resolved["functioning_channel"]
-        if isinstance(target, discord.TextChannel):
-            embed = discord.Embed(
-                title="💜 Como funciona o KAUANLLZ STUDIO CRIATIVO",
-                description="Bem-vindo(a)! Aqui você encontra serviços criativos para FiveM/GTA RP, com atendimento organizado por tickets.",
-                color=discord.Color.from_rgb(125, 75, 220)
-            )
-            embed.add_field(name="🧭 1. Comece por aqui", value="Leia as informações no canal de entrada e confira as regras e os termos antes de comprar.", inline=False)
-            embed.add_field(name="🎨 2. Conheça os serviços", value="Consulte o catálogo para roupas e uniformes, texturização, acessórios, props, otimização e identidade visual.", inline=False)
-            embed.add_field(name="🎫 3. Abra um atendimento", value="Use o painel de tickets ou o botão de pedido do catálogo. Envie referências, detalhes, quantidade e o que precisa.", inline=False)
-            embed.add_field(name="💰 4. Confirme o orçamento", value="A equipe confirma preço, prazo e entrega no ticket oficial. Não pague antes de confirmar os detalhes.", inline=False)
-            embed.add_field(name="🧾 5. Pagamento e entrega", value="O pagamento é via Pix conforme as instruções da equipe. A confirmação é manual; após a confirmação, a equipe libera a entrega combinada.", inline=False)
-            embed.add_field(name="🔐 6. Segurança e suporte", value="Nunca compartilhe senhas ou códigos. Mantenha a conversa no ticket e consulte os termos de compra para saber as condições.", inline=False)
-            embed.set_footer(text="Transformando ideias em identidade. Criatividade, qualidade e personalidade em cada projeto.")
-            await target.send(embed=embed)
-        msg = "✅ Canais do Studio configurados e informações de Funcionamentos publicadas."
-        if missing:
-            msg += "\n⚠️ Não encontrei estes IDs neste servidor: " + ", ".join(missing) + ". Confira se os canais pertencem a este servidor e se o bot consegue vê-los."
-        await ephemeral(interaction, msg)
+    # configurar_canais_studio removido: canais definidos automaticamente para esta instalação.
 
     @app_commands.command(name="automod_status", description="Mostra o estado básico da automoderação")
     @app_commands.default_permissions(manage_guild=True)
