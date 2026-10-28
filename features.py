@@ -380,8 +380,8 @@ class StudioFeatures(commands.Cog):
         if not (entrega.startswith("https://") or entrega.startswith("http://") or por_encomenda):
             return await ephemeral(interaction, "Para produto pronto, informe um link HTTPS de entrega. Para produto por encomenda, marque por_encomenda=True.")
         products = await get_data(self.redis, key(interaction.guild.id, "store:products"), {})
-        product_id = str(int(time.time()))
-        products[product_id] = {"name": nome.strip(), "price": preco.strip(), "description": descricao.strip(), "delivery": entrega.strip(), "made_to_order": por_encomenda, "active": True}
+        product_id = str(time.time_ns())[-12:]
+        products[product_id] = {"name": nome.strip(), "price": preco.strip(), "description": descricao.strip(), "delivery": "" if por_encomenda else entrega.strip(), "made_to_order": por_encomenda, "active": True}
         await set_data(self.redis, key(interaction.guild.id, "store:products"), products)
         await ephemeral(interaction, f"Produto {discord.utils.escape_mentions(nome)} cadastrado com ID {product_id}. Ele aparecerá no seletor de compras do catálogo.")
 
