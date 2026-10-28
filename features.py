@@ -88,6 +88,55 @@ class VerificationView(discord.ui.View):
 
 
 
+
+class StoreTutorialView(discord.ui.View):
+    PAGES = [
+        ("👋 Bem-vindo à loja", "O **Studio Criativo** cria roupas, uniformes e peças personalizadas para servidores de **GTA RP**. Leia as etapas antes de iniciar seu pedido.\n\n🔒 Nunca envie senhas, códigos de autenticação ou acesso à sua conta."),
+        ("1️⃣ Escolha o produto", "Confira o catálogo e escolha a categoria: **roupas e uniformes**, **acessórios**, **pacotes RP** ou **personalizados**.\n\nSe for uma encomenda personalizada, prepare referências, nome da cidade/servidor, modelo desejado e quantidade."),
+        ("2️⃣ Abra seu ticket", "Clique em **Fazer pedido** no catálogo. O bot abrirá um canal privado para você e a equipe.\n\nEnvie os detalhes do pedido e, se necessário, imagens de referência. Não abra vários tickets para a mesma compra."),
+        ("3️⃣ Confirme o orçamento", "A equipe confirmará o produto, o preço final, o prazo e os detalhes da entrega. **Não pague antes de confirmar o valor no ticket oficial.**"),
+        ("4️⃣ Pague via Pix", "Use somente os dados de Pix informados pela equipe no ticket oficial. Confira o destinatário e o valor antes de pagar.\n\nA confirmação do pagamento é feita pela equipe; nunca envie senha bancária ou código de autenticação."),
+        ("5️⃣ Receba seu produto", "Após a equipe confirmar o pagamento e finalizar o pedido, o produto ou as instruções serão enviados conforme combinado. Confira suas mensagens privadas no Discord e permita DMs do servidor."),
+        ("🆘 Precisa de ajuda?", "Se tiver dúvidas, responda no próprio ticket para manter o histórico do pedido. Não confie em pessoas que chamem no privado pedindo pagamento fora do procedimento oficial.")
+    ]
+
+    def __init__(self):
+        super().__init__(timeout=900)
+        self.page = 0
+        self._refresh_buttons()
+
+    def _refresh_buttons(self):
+        self.clear_items()
+        prev_button = discord.ui.Button(label="Anterior", emoji="⬅️", style=discord.ButtonStyle.secondary, disabled=self.page == 0)
+        next_button = discord.ui.Button(label="Próxima etapa", emoji="➡️", style=discord.ButtonStyle.primary, disabled=self.page == len(self.PAGES) - 1)
+        prev_button.callback = self.previous_page
+        next_button.callback = self.next_page
+        self.add_item(prev_button)
+        self.add_item(next_button)
+        start_button = discord.ui.Button(label="Iniciar pedido", emoji="🛍️", style=discord.ButtonStyle.success)
+        start_button.callback = self.start_order
+        self.add_item(start_button)
+
+    def _embed(self):
+        title, body = self.PAGES[self.page]
+        embed = discord.Embed(title=f"📘 Tutorial da Loja • {title}", description=body, color=discord.Color.from_rgb(125, 75, 220))
+        embed.set_footer(text=f"Studio Criativo • Etapa {self.page + 1} de {len(self.PAGES)}")
+        return embed
+
+    async def previous_page(self, interaction: discord.Interaction):
+        self.page = max(0, self.page - 1)
+        self._refresh_buttons()
+        await interaction.response.edit_message(embed=self._embed(), view=self)
+
+    async def next_page(self, interaction: discord.Interaction):
+        self.page = min(len(self.PAGES) - 1, self.page + 1)
+        self._refresh_buttons()
+        await interaction.response.edit_message(embed=self._embed(), view=self)
+
+    async def start_order(self, interaction: discord.Interaction):
+        await StoreOrderView().children[0].callback(interaction)
+
+
 class ProductSelect(discord.ui.Select):
     def __init__(self, guild_id, products):
         self.guild_id = guild_id
@@ -451,6 +500,18 @@ class StudioFeatures(commands.Cog):
         if isinstance(log_channel, discord.TextChannel):
             await log_channel.send(f"📦 Pedido {pedido_id} entregue a <@{order['user_id']}>. Responsável: {interaction.user.mention}.")
         await ephemeral(interaction, f"Entrega do pedido {pedido_id} concluída e enviada por DM.")
+
+    @app_commands.command(name="tutorial_loja", description="Publica o tutorial interativo de compras da loja GTA RP")
+    @app_commands.describe(canal="Canal onde o tutorial será publicado")
+    async def tutorial_loja(self, interaction: discord.Interaction, canal: discord.TextChannel = None):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
+        target = canal or interaction.channel
+        if not isinstance(target, discord.TextChannel):
+            return await ephemeral(interaction, "Escolha um canal de texto.")
+        embed = StoreTutorialView()._embed()
+        await target.send(embed=embed, view=StoreTutorialView())
+        await ephemeral(interaction, f"Tutorial interativo publicado em {target.mention}.")
 
     @app_commands.command(name="catalogo_roupas", description="Publica o catálogo da loja de roupas GTA RP")
     @app_commands.describe(canal="Canal onde o catálogo será publicado; por padrão, o canal atual")
