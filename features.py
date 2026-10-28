@@ -222,12 +222,6 @@ class StoreOrderView(discord.ui.View):
     async def order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este painel dentro do servidor.")
-        settings = await interaction.client.get_settings(interaction.guild.id)
-        role_id = settings.get("verified_role_id")
-        if role_id and isinstance(interaction.user, discord.Member):
-            role = interaction.guild.get_role(int(role_id))
-            if role and role not in interaction.user.roles:
-                return await ephemeral(interaction, "Antes de fazer um pedido, conclua a verificação no canal de verificação.")
         products = await get_data(interaction.client.redis, key(interaction.guild.id, "store:products"), {})
         products = {pid: item for pid, item in products.items() if item.get("active", True)}
         if not products:
@@ -595,12 +589,6 @@ class StudioFeatures(commands.Cog):
         target = canal or interaction.channel
         if not isinstance(target, discord.TextChannel):
             return await ephemeral(interaction, "Escolha um canal de texto.")
-        settings = await self.bot.get_settings(interaction.guild.id)
-        verified_id = settings.get("verified_role_id")
-        if verified_id and isinstance(interaction.user, discord.Member):
-            verified_role = interaction.guild.get_role(int(verified_id))
-            if verified_role and verified_role not in interaction.user.roles and not interaction.user.guild_permissions.manage_guild:
-                return await ephemeral(interaction, "Conclua a verificação antes de publicar ou acessar este sistema.")
         embed = discord.Embed(
             title="👕 Studio Draconic • Loja GTA RP",
             description=("**Estilo para seu personagem. Identidade para sua cidade.**\n"
