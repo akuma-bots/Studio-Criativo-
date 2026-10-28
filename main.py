@@ -152,8 +152,8 @@ async def on_member_join(member: discord.Member):
         channel = member.guild.get_channel(int(channel_id))
         if isinstance(channel, discord.TextChannel):
             embed = discord.Embed(
-                title="Bem-vindo(a) ao Studio Criativo! ✨",
-                description=f"Olá {member.mention}! Seja bem-vindo(a) ao **{member.guild.name}**.",
+                title="🐉 Bem-vindo(a) ao Studio Draconic!",
+                description=f"Olá {member.mention}! Seja bem-vindo(a) ao **{member.guild.name}**. Confira os canais de informações e abra um ticket se precisar de ajuda.",
                 color=discord.Color.blurple()
             )
             embed.set_thumbnail(url=member.display_avatar.url)
@@ -203,9 +203,9 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
-@bot.tree.command(name="ajuda", description="Mostra os recursos do Studio Criativo Pro")
+@bot.tree.command(name="ajuda", description="Mostra os recursos do Studio Draconic")
 async def ajuda(interaction: discord.Interaction):
-    embed = discord.Embed(title="Studio Criativo Pro • Ajuda", color=discord.Color.blurple())
+    embed = discord.Embed(title="🐉 Studio Draconic • Central de Ajuda", color=discord.Color.from_rgb(155, 35, 255))
     embed.description = (
         "**Economia:** /saldo, /diario, /trabalhar, /pagar, /ranking, /loja, /comprar, /inventario\n"
         "**Experiência:** /nivel, /ranking_xp, /missao, /conquistas, /cargo_nivel\n"
@@ -454,7 +454,7 @@ async def limpar(interaction: discord.Interaction, quantidade: app_commands.Rang
 
 
 async def health_check(request: web.Request) -> web.Response:
-    return web.json_response({"status": "ok", "service": "Studio Criativo Pro"})
+    return web.json_response({"status": "ok", "service": "Studio Draconic"})
 
 
 async def start_health_server() -> web.AppRunner:
