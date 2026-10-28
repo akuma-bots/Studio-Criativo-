@@ -66,16 +66,28 @@ async def feature_log(bot, guild, message):
         log.exception("Falha ao registrar evento")
 
 
-async def upsert_bot_message(channel, embed, view=None, limit=50):
-    """Edits the bot's existing panel with the same title; sends only if absent."""
-    if not isinstance(channel, discord.TextChannel):
+async def upsert_bot_message(channel, embed, view=None, limit=200):
+    """Mantém uma única mensagem fixa por título: atualiza a existente e remove duplicatas antigas."""
+    if not isinstance(channel, discord.TextChannel) or channel.guild.me is None:
         return None
     title = embed.title
     try:
+        matches = []
         async for message in channel.history(limit=limit, oldest_first=False):
-            if message.author == channel.guild.me and message.embeds and message.embeds[0].title == title:
-                await message.edit(embed=embed, view=view)
-                return message
+            if message.author.id == channel.guild.me.id and message.embeds and message.embeds[0].title == title:
+                matches.append(message)
+        if matches:
+            # Mantém a mensagem mais recente e limpa duplicatas criadas por versões antigas.
+            keeper = matches[0]
+            await keeper.edit(embed=embed, view=view)
+            for duplicate in matches[1:]:
+                try:
+                    await duplicate.delete()
+                except discord.NotFound:
+                    pass
+                except discord.HTTPException:
+                    log.warning("Não consegui remover painel duplicado %s no canal %s", duplicate.id, channel.id)
+            return keeper
         return await channel.send(embed=embed, view=view)
     except discord.HTTPException:
         log.exception("Falha ao atualizar painel %r no canal %s", title, channel.id)
@@ -578,8 +590,8 @@ class StudioFeatures(commands.Cog):
         if not isinstance(target, discord.TextChannel):
             return await ephemeral(interaction, "Escolha um canal de texto.")
         embed = StoreTutorialView()._embed()
-        await target.send(embed=embed, view=StoreTutorialView())
-        await ephemeral(interaction, f"Tutorial interativo publicado em {target.mention}.")
+        await upsert_bot_message(target, embed, StoreTutorialView())
+        await ephemeral(interaction, f"Tutorial atualizado em {target.mention}; reutilizei a mensagem existente quando encontrada.")
 
     @app_commands.command(name="catalogo_roupas", description="Publica o catálogo da loja de roupas GTA RP")
     @app_commands.describe(canal="Canal onde o catálogo será publicado; por padrão, o canal atual")
@@ -601,8 +613,8 @@ class StudioFeatures(commands.Cog):
             embed.add_field(name=name, value=description, inline=False)
         embed.add_field(name="📋 Como comprar", value="1. Clique em **Fazer pedido**.\n2. Informe a cidade, o modelo e a quantidade.\n3. Aguarde a confirmação do orçamento pela equipe.", inline=False)
         embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
-        await target.send(embed=embed, view=StoreOrderView())
-        await ephemeral(interaction, f"Catálogo publicado em {target.mention}.")
+        await upsert_bot_message(target, embed, StoreOrderView())
+        await ephemeral(interaction, f"Catálogo atualizado em {target.mention}; reutilizei a mensagem existente quando encontrada.")
 
     @app_commands.command(name="loja", description="Mostra os itens disponíveis")
     async def loja(self, interaction):
@@ -741,8 +753,8 @@ class StudioFeatures(commands.Cog):
         embed.add_field(name="🛠️ Suporte Técnico", value="Ajuda com pedidos, pagamentos ou entregas.", inline=True)
         embed.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha a opção correspondente no menu.", inline=False)
         embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
-        await canal.send(embed=embed, view=TicketPanelView())
-        await ephemeral(interaction, f"Painel de tickets publicado em {canal.mention}.")
+        await upsert_bot_message(canal, embed, TicketPanelView())
+        await ephemeral(interaction, f"Painel de tickets atualizado em {canal.mention}; sem criar cópia quando já existe.")
 
     @app_commands.command(name="ticket", description="Abre um canal privado de suporte")
     async def ticket(self, interaction, assunto: str = "Suporte"):
