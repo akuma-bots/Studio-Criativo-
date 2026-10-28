@@ -13,10 +13,13 @@ from upstash_redis.asyncio import Redis
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN", "").strip()
+UPSTASH_URL = os.getenv("UPSTASH_REDIS_REST_URL", "").strip()
+UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "").strip()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 # Upstash Redis is the primary persistent database. Credentials are environment-only.
-redis = Redis.from_env()
+# Delay client construction when credentials are absent so the startup error stays readable.
+redis = Redis(url=UPSTASH_URL, token=UPSTASH_TOKEN) if UPSTASH_URL and UPSTASH_TOKEN else None
 
 intents = discord.Intents.default()
 intents.members = True
@@ -397,6 +400,6 @@ async def limpar(interaction: discord.Interaction, quantidade: app_commands.Rang
 if __name__ == "__main__":
     if not TOKEN:
         raise SystemExit("Configure DISCORD_TOKEN no ambiente antes de iniciar.")
-    if not os.getenv("UPSTASH_REDIS_REST_URL") or not os.getenv("UPSTASH_REDIS_REST_TOKEN"):
+    if not UPSTASH_URL or not UPSTASH_TOKEN:
         raise SystemExit("Configure UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN no ambiente.")
     bot.run(TOKEN)
