@@ -418,7 +418,6 @@ class StudioFeatures(commands.Cog):
             await self.redis.expire(raid_key, 20)
         if int(joins) >= 8 and int(joins) in (8, 12, 16, 20):
             await feature_log(self.bot, member.guild, f"ALERTA ANTI-RAID: {joins} entradas em 20 segundos. Verifique o servidor.")
-        await feature_log(self.bot, member.guild, f"Novo membro: {member.mention}.")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -450,9 +449,6 @@ class StudioFeatures(commands.Cog):
                     pass
                 await feature_log(self.bot, message.guild, f"Anti-spam acionado para {message.author.mention} em {message.channel.mention}.")
 
-    @commands.Cog.listener()
-    async def on_member_remove(self, member):
-        await feature_log(self.bot, member.guild, f"Membro saiu: {discord.utils.escape_markdown(member.display_name)}.")
 
 
 async def setup(bot):
