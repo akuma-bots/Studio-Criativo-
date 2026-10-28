@@ -76,7 +76,7 @@ class VerificationView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Verificar-se", style=discord.ButtonStyle.success, emoji="🛡️", custom_id="scpro:verify:member")
+    @discord.ui.button(label="Verificar acesso", style=discord.ButtonStyle.primary, emoji="🐉", custom_id="scpro:verify:member")
     async def verify_member(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.guild is None or not isinstance(interaction.user, discord.Member):
             return await ephemeral(interaction, "Use esta verificação dentro do servidor.")
@@ -129,13 +129,13 @@ class StoreTutorialView(discord.ui.View):
         next_button.callback = self.next_page
         self.add_item(prev_button)
         self.add_item(next_button)
-        start_button = discord.ui.Button(label="Iniciar pedido", emoji="🛍️", style=discord.ButtonStyle.success)
+        start_button = discord.ui.Button(label="Iniciar pedido", emoji="♛", style=discord.ButtonStyle.primary)
         start_button.callback = self.start_order
         self.add_item(start_button)
 
     def _embed(self):
         title, body = self.PAGES[self.page]
-        embed = discord.Embed(title=f"📘 Tutorial da Loja • {title}", description=body, color=discord.Color.from_rgb(125, 75, 220))
+        embed = discord.Embed(title=f"🐉 KAUANLLZ • GUIA DA LOJA • {title}", description=body, color=discord.Color.from_rgb(125, 75, 220))
         embed.set_footer(text=f"Studio Criativo • Etapa {self.page + 1} de {len(self.PAGES)}")
         return embed
 
@@ -195,7 +195,7 @@ class ProductSelect(discord.ui.Select):
         channel = await guild.create_text_channel(name=f"pedido-{interaction.user.name[:12]}".lower().replace(" ", "-"), category=category, overwrites=overwrites, topic=f"Pedido {order_id} | scpro-ticket-owner:{interaction.user.id} scpro-order:true", reason=f"Pedido da loja {order_id} aberto por {interaction.user}")
         pix_key_kaua = PIX_KEY_KAUA
         pix_key_kauan = PIX_KEY_KAUAN
-        embed = discord.Embed(title=f"🛍️ Pedido {order_id} • Studio Criativo", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.blurple())
+        embed = discord.Embed(title=f"🐉 KAUANLLZ STUDIO • PEDIDO {order_id}", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
         embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
         embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
         embed.add_field(name="Tipo", value="Por encomenda" if product.get("made_to_order") else "Produto pronto", inline=True)
@@ -214,7 +214,7 @@ class ProductSelect(discord.ui.Select):
         log_channel_id = settings.get("purchase_log_channel")
         log_channel = guild.get_channel(int(log_channel_id)) if log_channel_id else None
         if isinstance(log_channel, discord.TextChannel):
-            log_embed = discord.Embed(title=f"🧾 Novo pedido {order_id}", color=discord.Color.orange())
+            log_embed = discord.Embed(title=f"🐉 NOVO PEDIDO • {order_id}", color=discord.Color.orange())
             log_embed.add_field(name="Cliente", value=f"{interaction.user.mention} (ID: {interaction.user.id})", inline=False)
             log_embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
             log_embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
@@ -238,7 +238,7 @@ class StoreOrderView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Fazer pedido", style=discord.ButtonStyle.primary, emoji="🛍️", custom_id="scpro:store:order")
+    @discord.ui.button(label="Escolher pacote", style=discord.ButtonStyle.primary, emoji="🐉", custom_id="scpro:store:order")
     async def order(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este painel dentro do servidor.")
@@ -300,7 +300,7 @@ class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Abrir ticket", style=discord.ButtonStyle.primary, emoji="🎫", custom_id="scpro:ticket:open")
+    @discord.ui.button(label="Atendimento", style=discord.ButtonStyle.primary, emoji="💜", custom_id="scpro:ticket:open")
     async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         if guild is None:
@@ -344,7 +344,7 @@ class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Fechar ticket", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="scpro:ticket:close")
+    @discord.ui.button(label="Fechar atendimento", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="scpro:ticket:close")
     async def close_ticket(self, interaction, button):
         channel = interaction.channel
         if not isinstance(channel, discord.TextChannel) or not channel.topic or "scpro-ticket-owner:" not in channel.topic:
@@ -369,7 +369,7 @@ class GiveawayView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Participar", style=discord.ButtonStyle.success, emoji="🎉", custom_id="scpro:giveaway:join")
+    @discord.ui.button(label="Participar", style=discord.ButtonStyle.primary, emoji="💜", custom_id="scpro:giveaway:join")
     async def join(self, interaction, button):
         if interaction.guild is None or interaction.message is None:
             return await ephemeral(interaction, "Use este botão no servidor.")
@@ -520,7 +520,7 @@ class StudioFeatures(commands.Cog):
         if user is None:
             return await ephemeral(interaction, "Não consegui encontrar o cliente no servidor. Verifique se ele ainda é membro.")
         try:
-            await user.send(embed=discord.Embed(title=f"📦 Seu pedido {pedido_id} foi entregue!", description=f"Produto: {discord.utils.escape_mentions(order['product_name'])}\n\n{discord.utils.escape_mentions(delivery)}\n\nObrigado por comprar no Studio Criativo!", color=discord.Color.green()))
+            await user.send(embed=discord.Embed(title=f"🐉 KAUANLLZ • PEDIDO {pedido_id} ENTREGUE", description=f"Produto: {discord.utils.escape_mentions(order['product_name'])}\n\n{discord.utils.escape_mentions(delivery)}\n\nObrigado por comprar no Studio Criativo!", color=discord.Color.from_rgb(155, 35, 255)))
         except discord.Forbidden:
             return await ephemeral(interaction, "Não consegui enviar DM ao cliente. Peça para habilitar mensagens diretas e tente novamente.")
         order["status"] = "entregue"
@@ -573,13 +573,13 @@ class StudioFeatures(commands.Cog):
         for _, (name, description) in STORE_CATEGORIES.items():
             embed.add_field(name=name, value=description, inline=False)
         embed.add_field(name="📋 Como comprar", value="1. Clique em **Fazer pedido**.\n2. Informe a cidade, o modelo e a quantidade.\n3. Aguarde a confirmação do orçamento pela equipe.", inline=False)
-        embed.set_footer(text="KAUANLLZ STUDIO CRIATIVO  •  Ideias que viram realidade")
+        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Preto & Roxo Neon")
         await target.send(embed=embed, view=StoreOrderView())
         await ephemeral(interaction, f"Catálogo publicado em {target.mention}.")
 
     @app_commands.command(name="loja", description="Mostra os itens disponíveis")
     async def loja(self, interaction):
-        embed = discord.Embed(title="🛒 Loja do Studio Criativo", color=discord.Color.gold())
+        embed = discord.Embed(title="🐉 KAUANLLZ • LOJA OFICIAL", color=discord.Color.from_rgb(155, 35, 255))
         for item_id, item in ITEMS.items():
             embed.add_field(name=f"{item['name']} — {item['price']} moedas", value=f"{item_id}: {item['description']}", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -742,7 +742,7 @@ class StudioFeatures(commands.Cog):
             topic=f"Ticket: {discord.utils.escape_markdown(assunto)} | scpro-ticket-owner:{interaction.user.id}",
             reason=f"Ticket aberto por {interaction.user}"
         )
-        embed = discord.Embed(title="Ticket de suporte", description=f"Olá {interaction.user.mention}! A equipe atenderá você aqui.\nAssunto: {discord.utils.escape_markdown(assunto)}", color=discord.Color.blurple())
+        embed = discord.Embed(title="🐉 KAUANLLZ • ATENDIMENTO", description=f"Olá {interaction.user.mention}! A equipe atenderá você aqui.\nAssunto: {discord.utils.escape_markdown(assunto)}", color=discord.Color.blurple())
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         await interaction.response.send_message(f"Seu ticket foi criado: {channel.mention}", ephemeral=True)
         await feature_log(self.bot, guild, f"Ticket aberto por {interaction.user.mention}: {channel.mention}")
@@ -754,7 +754,7 @@ class StudioFeatures(commands.Cog):
         channel = await self.channel_for(interaction.guild, "suggestion_channel")
         if not isinstance(channel, discord.TextChannel):
             return await ephemeral(interaction, "Configure o canal com /configurar_sistemas primeiro.")
-        embed = discord.Embed(title="Nova sugestão", description=discord.utils.escape_mentions(texto), color=discord.Color.blurple(), timestamp=datetime.now(timezone.utc))
+        embed = discord.Embed(title="🐉 KAUANLLZ • NOVA SUGESTÃO", description=discord.utils.escape_mentions(texto), color=discord.Color.blurple(), timestamp=datetime.now(timezone.utc))
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
         embed.set_footer(text=f"Autor ID: {interaction.user.id}")
         message = await channel.send(embed=embed)
@@ -793,7 +793,7 @@ class StudioFeatures(commands.Cog):
         if not isinstance(channel, discord.TextChannel):
             channel = interaction.channel
         end_at = int(time.time()) + minutos * 60
-        embed = discord.Embed(title="SORTEIO", description=f"Prêmio: {discord.utils.escape_mentions(premio)}\nGanhadores: {ganhadores}\nEncerra: <t:{end_at}:R>\n\nClique no botão para participar!", color=discord.Color.gold())
+        embed = discord.Embed(title="🐉 KAUANLLZ • SORTEIO", description=f"Prêmio: {discord.utils.escape_mentions(premio)}\nGanhadores: {ganhadores}\nEncerra: <t:{end_at}:R>\n\nClique no botão para participar!", color=discord.Color.gold())
         embed.set_footer(text=f"Criado por {interaction.user.display_name}")
         await interaction.response.send_message(f"Sorteio criado em {channel.mention}.", ephemeral=True)
         message = await channel.send(embed=embed, view=GiveawayView())
