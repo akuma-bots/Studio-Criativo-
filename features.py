@@ -299,7 +299,7 @@ class StoreOrderView(discord.ui.View):
     async def show_prices(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
             title="♛ KAUANLLZ • TABELA DE PREÇOS",
-            description="**COMBOS PROMOCIONAIS**\\n\\n**01 peça** — R$ 25,00\\n**02 peças** — R$ 40,00\\n**03 peças** — R$ 65,00\\n**04 peças** — R$ 85,00\\n**06 peças** — R$ 120,00\\n**07 peças** — R$ 150,00\\n**08 peças** — R$ 170,00\\n**09 peças** — R$ 180,00\\n\\nPara quantidades diferentes, consulte a equipe no ticket. O valor e o prazo serão confirmados antes do pagamento.",
+            description="**COMBOS PROMOCIONAIS**\n\n**01 peça** — R$ 25,00\n**02 peças** — R$ 40,00\n**03 peças** — R$ 65,00\n**04 peças** — R$ 85,00\n**06 peças** — R$ 120,00\n**07 peças** — R$ 150,00\n**08 peças** — R$ 170,00\n**09 peças** — R$ 180,00\n\nPara quantidades diferentes, consulte a equipe no ticket. O valor e o prazo serão confirmados antes do pagamento.",
             color=discord.Color.from_rgb(155, 35, 255),
         )
         embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Preto & Roxo Neon")
