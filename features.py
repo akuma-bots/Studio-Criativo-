@@ -177,16 +177,25 @@ class ProductSelect(discord.ui.Select):
             overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
         order_id = f"SC-{int(time.time())}-{interaction.user.id % 10000:04d}"
         channel = await guild.create_text_channel(name=f"pedido-{interaction.user.name[:12]}".lower().replace(" ", "-"), category=category, overwrites=overwrites, topic=f"Pedido {order_id} | scpro-ticket-owner:{interaction.user.id} scpro-order:true", reason=f"Pedido da loja {order_id} aberto por {interaction.user}")
-        pix_key = settings.get("store_pix_key")
+        pix_key_kaua = settings.get("store_pix_key_kaua")
+        pix_key_kauan = settings.get("store_pix_key_kauan")
+        legacy_pix_key = settings.get("store_pix_key")
         embed = discord.Embed(title=f"🛍️ Pedido {order_id} • Studio Criativo", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.blurple())
         embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
         embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
         embed.add_field(name="Tipo", value="Por encomenda" if product.get("made_to_order") else "Produto pronto", inline=True)
         embed.add_field(name="Descrição", value=discord.utils.escape_mentions(product.get("description", "Sem descrição"))[:1024], inline=False)
-        if pix_key:
-            embed.add_field(name="Pagamento via Pix", value=f"Chave Pix: {discord.utils.escape_markdown(str(pix_key))}\nPague somente após a equipe confirmar o valor e as instruções.", inline=False)
-        else:
-            embed.add_field(name="Pagamento via Pix", value="A equipe enviará as instruções de Pix neste ticket.", inline=False)
+        pix_lines = []
+        if pix_key_kaua:
+            pix_lines.append("**Kauã Gonsalves** — " + discord.utils.escape_markdown(str(pix_key_kaua)))
+        if pix_key_kauan:
+            pix_lines.append("**Kauan Salles** — " + discord.utils.escape_markdown(str(pix_key_kauan)))
+        if not pix_lines and legacy_pix_key:
+            pix_lines.append("**Chave Pix** — " + discord.utils.escape_markdown(str(legacy_pix_key)))
+        if not pix_lines:
+            pix_lines.append("A equipe enviará as instruções de Pix neste ticket.")
+        pix_lines.append("Pague somente após a equipe confirmar o valor. Confira o nome do destinatário antes de concluir.")
+        embed.add_field(name="Pagamento via Pix", value="\\n".join(pix_lines)[:1024], inline=False)
         embed.add_field(name="Próximos passos", value="1. Confirme os detalhes com a equipe.\n2. Pague via Pix após a confirmação.\n3. A equipe valida o recebimento e libera a entrega.", inline=False)
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         order = {"order_id": order_id, "guild_id": guild.id, "channel_id": channel.id, "user_id": interaction.user.id, "product_id": product_id, "product_name": product["name"], "price": product.get("price", "A confirmar"), "status": "aguardando_pagamento", "created_at": int(time.time())}
@@ -505,19 +514,20 @@ class StudioFeatures(commands.Cog):
         await ephemeral(interaction, f"Painel publicado em {target.mention}; cargo de verificado: {cargo_verificado.mention}.")
 
 
-    @app_commands.command(name="configurar_loja_pix", description="Configura Pix e canal de registro de pedidos")
+    @app_commands.command(name="configurar_loja_pix", description="Configura duas chaves Pix e o canal de registro de pedidos")
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def configurar_loja_pix(self, interaction: discord.Interaction, chave_pix: str, canal_registro: discord.TextChannel):
+    async def configurar_loja_pix(self, interaction: discord.Interaction, pix_kaua_gonsalves: str, pix_kauan_salles: str, canal_registro: discord.TextChannel):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando dentro de um servidor.")
-        if len(chave_pix.strip()) > 200:
-            return await ephemeral(interaction, "A chave Pix é longa demais.")
+        if len(pix_kaua_gonsalves.strip()) > 200 or len(pix_kauan_salles.strip()) > 200:
+            return await ephemeral(interaction, "Uma das chaves Pix é longa demais.")
         settings = await self.bot.get_settings(interaction.guild.id)
-        settings["store_pix_key"] = chave_pix.strip()
+        settings["store_pix_key_kaua"] = pix_kaua_gonsalves.strip()
+        settings["store_pix_key_kauan"] = pix_kauan_salles.strip()
         settings["purchase_log_channel"] = canal_registro.id
         await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
-        await ephemeral(interaction, f"Configuração salva. Registros de compras serão enviados para {canal_registro.mention}. Confirme a chave Pix antes de divulgar a loja.")
+        await ephemeral(interaction, f"Configuração salva com as duas chaves Pix. Registros de compras serão enviados para {canal_registro.mention}. Confira os titulares e faça um teste antes de divulgar as chaves.")
 
     @app_commands.command(name="produto_cadastrar", description="Cadastra produto pronto ou por encomenda na loja")
     @app_commands.default_permissions(manage_guild=True)
