@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -6,6 +7,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import discord
+from aiohttp import web
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -397,9 +399,34 @@ async def limpar(interaction: discord.Interaction, quantidade: app_commands.Rang
         )
 
 
-if __name__ == "__main__":
+async def health_check(request: web.Request) -> web.Response:
+    return web.json_response({"status": "ok", "service": "Studio Criativo Pro"})
+
+
+async def start_health_server() -> web.AppRunner:
+    app = web.Application()
+    app.router.add_get("/", health_check)
+    app.router.add_get("/health", health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.getenv("PORT", "10000"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logging.info("Servidor de saúde HTTP iniciado na porta %s", port)
+    return runner
+
+
+async def main() -> None:
     if not TOKEN:
         raise SystemExit("Configure DISCORD_TOKEN no ambiente antes de iniciar.")
     if not UPSTASH_URL or not UPSTASH_TOKEN:
         raise SystemExit("Configure UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN no ambiente.")
-    bot.run(TOKEN)
+    runner = await start_health_server()
+    try:
+        await bot.start(TOKEN)
+    finally:
+        await runner.cleanup()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
