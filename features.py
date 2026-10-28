@@ -10,6 +10,22 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 log = logging.getLogger(__name__)
+
+# Instalação dedicada ao KAUANLLZ STUDIO CRIATIVO: canais e Pix fixos.
+STUDIO_CHANNELS = {
+    "welcome_channel": 1557571732624113745,
+    "functioning_channel": 1557572016188432474,
+    "terms_channel": 1557572074338390077,
+    "booster_channel": 1557572137781567578,
+    "store_catalog_channel": 1557572244383989760,
+    "products_channel": 1557573029238800488,
+    "purchase_log_channel": 1565016859131121725,
+    "ticket_log_channel": 1557630941596356671,
+    "moderation_log_channel": 1565018251124146369,
+    "log_channel": 1565018509694738502,
+}
+PIX_KEY_KAUA = "14499092990"
+PIX_KEY_KAUAN = "173.867.024.42"  # Mantida exatamente como fornecida.
 ITEMS = {
     "caixa": {"name": "Caixa Surpresa", "price": 250, "description": "Abra para ganhar 100–500 moedas."},
     "amulet": {"name": "Amuleto da Sorte", "price": 500, "description": "Item colecionável."},
@@ -177,9 +193,8 @@ class ProductSelect(discord.ui.Select):
             overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
         order_id = f"SC-{int(time.time())}-{interaction.user.id % 10000:04d}"
         channel = await guild.create_text_channel(name=f"pedido-{interaction.user.name[:12]}".lower().replace(" ", "-"), category=category, overwrites=overwrites, topic=f"Pedido {order_id} | scpro-ticket-owner:{interaction.user.id} scpro-order:true", reason=f"Pedido da loja {order_id} aberto por {interaction.user}")
-        pix_key_kaua = settings.get("store_pix_key_kaua")
-        pix_key_kauan = settings.get("store_pix_key_kauan")
-        legacy_pix_key = settings.get("store_pix_key")
+        pix_key_kaua = PIX_KEY_KAUA
+        pix_key_kauan = PIX_KEY_KAUAN
         embed = discord.Embed(title=f"🛍️ Pedido {order_id} • Studio Criativo", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.blurple())
         embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
         embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
@@ -190,10 +205,6 @@ class ProductSelect(discord.ui.Select):
             pix_lines.append("**Kauã Gonsalves** — " + discord.utils.escape_markdown(str(pix_key_kaua)))
         if pix_key_kauan:
             pix_lines.append("**Kauan Salles** — " + discord.utils.escape_markdown(str(pix_key_kauan)))
-        if not pix_lines and legacy_pix_key:
-            pix_lines.append("**Chave Pix** — " + discord.utils.escape_markdown(str(legacy_pix_key)))
-        if not pix_lines:
-            pix_lines.append("A equipe enviará as instruções de Pix neste ticket.")
         pix_lines.append("Pague somente após a equipe confirmar o valor. Confira o nome do destinatário antes de concluir.")
         embed.add_field(name="Pagamento via Pix", value="\\n".join(pix_lines)[:1024], inline=False)
         embed.add_field(name="Próximos passos", value="1. Confirme os detalhes com a equipe.\n2. Pague via Pix após a confirmação.\n3. A equipe valida o recebimento e libera a entrega.", inline=False)
@@ -514,20 +525,7 @@ class StudioFeatures(commands.Cog):
         await ephemeral(interaction, f"Painel publicado em {target.mention}; cargo de verificado: {cargo_verificado.mention}.")
 
 
-    @app_commands.command(name="configurar_loja_pix", description="Configura duas chaves Pix e o canal de registro de pedidos")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def configurar_loja_pix(self, interaction: discord.Interaction, pix_kaua_gonsalves: str, pix_kauan_salles: str, canal_registro: discord.TextChannel):
-        if interaction.guild is None:
-            return await ephemeral(interaction, "Use este comando dentro de um servidor.")
-        if len(pix_kaua_gonsalves.strip()) > 200 or len(pix_kauan_salles.strip()) > 200:
-            return await ephemeral(interaction, "Uma das chaves Pix é longa demais.")
-        settings = await self.bot.get_settings(interaction.guild.id)
-        settings["store_pix_key_kaua"] = pix_kaua_gonsalves.strip()
-        settings["store_pix_key_kauan"] = pix_kauan_salles.strip()
-        settings["purchase_log_channel"] = canal_registro.id
-        await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
-        await ephemeral(interaction, f"Configuração salva com as duas chaves Pix. Registros de compras serão enviados para {canal_registro.mention}. Confira os titulares e faça um teste antes de divulgar as chaves.")
+    # As chaves Pix são constantes desta instalação e não têm comando de configuração.
 
     @app_commands.command(name="produto_cadastrar", description="Cadastra produto pronto ou por encomenda na loja")
     @app_commands.default_permissions(manage_guild=True)
@@ -926,9 +924,54 @@ class StudioFeatures(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # Descobre o servidor dono pelos canais fixos e aplica os IDs automaticamente.
+        owner_guild_ids = set()
+        for channel_id in STUDIO_CHANNELS.values():
+            channel = self.bot.get_channel(channel_id)
+            if channel and channel.guild:
+                owner_guild_ids.add(channel.guild.id)
+        if len(owner_guild_ids) > 1:
+            log.error("Os canais fixos do Studio estão distribuídos por mais de um servidor; verifique os IDs.")
         for guild in self.bot.guilds:
+            if owner_guild_ids and guild.id not in owner_guild_ids:
+                continue
             await self.redis.sadd("scpro:feature:active-guilds", str(guild.id))
-        log.info("Sistemas extras carregados em %s servidores.", len(self.bot.guilds))
+            settings = await self.bot.get_settings(guild.id)
+            changed = False
+            for name, channel_id in STUDIO_CHANNELS.items():
+                channel = guild.get_channel(channel_id)
+                if isinstance(channel, discord.TextChannel) and settings.get(name) != channel_id:
+                    settings[name] = channel_id
+                    changed = True
+            if not settings.get("ticket_category"):
+                category = discord.utils.get(guild.categories, name="🎫・Atendimentos")
+                if category is None and guild.me and guild.me.guild_permissions.manage_channels:
+                    try:
+                        category = await guild.create_category("🎫・Atendimentos", reason="Configuração automática do Studio Criativo")
+                    except discord.HTTPException:
+                        log.exception("Não foi possível criar a categoria de atendimentos")
+                if category:
+                    settings["ticket_category"] = category.id
+                    changed = True
+            if changed:
+                await self.bot.put_json(self.bot.settings_key(guild.id), settings)
+            target = guild.get_channel(STUDIO_CHANNELS["functioning_channel"])
+            if isinstance(target, discord.TextChannel):
+                try:
+                    async for msg in target.history(limit=30):
+                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 Como funciona o KAUANLLZ STUDIO CRIATIVO":
+                            break
+                    else:
+                        embed = discord.Embed(title="💜 Como funciona o KAUANLLZ STUDIO CRIATIVO", description="Bem-vindo(a)! Consulte os canais de informações e o catálogo, abra um ticket para atendimento e aguarde a equipe confirmar preço e prazo antes de pagar.", color=discord.Color.from_rgb(125, 75, 220))
+                        embed.add_field(name="🧭 Comece por aqui", value="Leia as regras e os termos nos canais indicados antes de fazer um pedido.", inline=False)
+                        embed.add_field(name="🎨 Serviços e catálogo", value="Confira os produtos e serviços disponíveis no catálogo oficial.", inline=False)
+                        embed.add_field(name="🎫 Atendimento", value="Pedidos e suporte devem continuar nos tickets privados do servidor.", inline=False)
+                        embed.add_field(name="💳 Pix e entrega", value="Confira o destinatário e pague apenas após a equipe confirmar o valor. A confirmação do pagamento é manual; a entrega é liberada após a validação.", inline=False)
+                        embed.add_field(name="🔐 Segurança", value="Nunca compartilhe senhas ou códigos. A equipe não pedirá seus dados de acesso.", inline=False)
+                        await target.send(embed=embed)
+                except discord.HTTPException:
+                    log.exception("Falha ao publicar o guia de funcionamento")
+        log.info("Sistemas extras carregados; instalação dedicada inicializada.")
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
