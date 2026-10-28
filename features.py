@@ -75,9 +75,8 @@ def panel_topic(title):
         return "catalog"
     if any(word in normalized for word in ("tabela", "preços", "precos")):
         return "prices"
-    if any(word in normalized for word in ("como funciona", "funcionamento")):
-        return "guide"
-    if "guia da loja" in normalized or "tutorial" in normalized or "como funciona" in normalized or "funcionamento" in normalized:
+    # Títulos antigos e atuais devem convergir para o mesmo painel tutorial.
+    if any(word in normalized for word in ("guia da loja", "tutorial", "como funciona", "funcionamento")):
         return "tutorial"
     return None
 
@@ -88,6 +87,12 @@ async def upsert_bot_message(channel, embed, view=None, limit=200):
         return None
     title = embed.title
     topic = panel_topic(title)
+    # Identidade visual consistente, usando o ícone do servidor quando disponível.
+    if channel.guild.icon:
+        embed.set_author(name="STUDIO DRACONIC  •  CENTRAL OFICIAL", icon_url=channel.guild.icon.url)
+    else:
+        embed.set_author(name="STUDIO DRACONIC  •  CENTRAL OFICIAL")
+    embed.timestamp = datetime.now(timezone.utc)
     try:
         matches = []
         async for message in channel.history(limit=limit, oldest_first=False):
@@ -909,29 +914,29 @@ class StudioFeatures(commands.Cog):
             if changed:
                 await self.bot.put_json(self.bot.settings_key(guild.id), settings)
             ticket_panel_channel = guild.get_channel(STUDIO_CHANNELS["ticket_channel"])
-            panel = discord.Embed(title="♛ STUDIO DRACONIC • CENTRAL DE ATENDIMENTO", description="**BEM-VINDO(A) AO SUPORTE OFICIAL**\n\nEscolha o assunto no menu abaixo. O bot abrirá um canal privado e organizado para acompanhar seu caso.\n\n**✦ Atendimento organizado**\nCada ticket tem um assunto específico.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada podem ver o atendimento. Nunca compartilhe senhas ou códigos.", color=discord.Color.from_rgb(155, 35, 255))
-            panel.add_field(name="🛍️ Comprar Algo", value="Produtos, combos e encomendas.", inline=True)
-            panel.add_field(name="💬 Dúvidas", value="Preços, prazos e funcionamento.", inline=True)
-            panel.add_field(name="🛠️ Suporte Técnico", value="Pedidos, pagamentos e entregas.", inline=True)
-            panel.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha uma opção no menu.", inline=False)
+            panel = discord.Embed(title="🐉 CENTRAL DE ATENDIMENTO", description="**SEU ESPAÇO OFICIAL DE SUPORTE**\n\nAbra um atendimento privado com a equipe do **Studio Draconic**. Escolha abaixo a opção que melhor descreve o que você precisa e acompanhe tudo em um único lugar.\n\n> Atendimento organizado, histórico preservado e privacidade por padrão.\n> **Segurança:** nunca envie senhas, códigos de autenticação ou dados bancários.", color=discord.Color.from_rgb(135, 65, 255))
+            panel.add_field(name="🛍️ COMPRAS", value="Catálogo, combos e encomendas personalizadas.", inline=True)
+            panel.add_field(name="💬 DÚVIDAS", value="Preços, prazos e orientações.", inline=True)
+            panel.add_field(name="🛠️ PEDIDOS", value="Pagamentos, entregas e suporte técnico.", inline=True)
+            panel.add_field(name="✦ OUTROS ASSUNTOS", value="Sorteios • Parcerias • Patrocínios\n**Selecione uma opção no menu abaixo para começar.**", inline=False)
             panel.set_footer(text="🐉 STUDIO DRACONIC • Preto & Roxo Neon")
             await upsert_bot_message(ticket_panel_channel, panel, TicketPanelView())
 
             catalog = guild.get_channel(STUDIO_CHANNELS["store_catalog_channel"])
             if isinstance(catalog, discord.TextChannel):
-                embed = discord.Embed(title="♛ STUDIO DRACONIC • CATÁLOGO", description="**IDENTIDADE. QUALIDADE. PERSONALIDADE.**\nRoupas e combos personalizados para seu projeto de GTA RP. Escolha seu pacote no menu e receba atendimento privado para alinhar referências, prazo e detalhes.", color=discord.Color.from_rgb(155, 35, 255))
-                embed.add_field(name="👕 Pacotes disponíveis", value="1 peça — **R$ 25,00**\n2 peças • Combo M+F — **R$ 40,00**\n3 peças — **R$ 65,00**\n4 peças — **R$ 85,00**\n6 peças — **R$ 120,00**\n7 peças — **R$ 150,00**\n8 peças — **R$ 170,00**\n9 peças — **R$ 180,00**", inline=False)
-                embed.add_field(name="✦ EXPERIÊNCIA DE COMPRA", value="**01** Escolha seu pacote.\n**02** Um ticket privado será aberto.\n**03** A equipe confirma detalhes, preço e prazo.\n**04** Pague somente após confirmação oficial.", inline=False)
+                embed = discord.Embed(title="🐉 CATÁLOGO EXCLUSIVO", description="**DESIGN QUE DESTACA A IDENTIDADE DO SEU RP**\n\nRoupas, uniformes e combos personalizados para projetos de **GTA RP**. Escolha um pacote no menu para iniciar um atendimento privado e alinhar referências, personalização e prazo.\n\n✦ **Processo claro**  •  ✦ **Atendimento dedicado**  •  ✦ **Entrega combinada**", color=discord.Color.from_rgb(135, 65, 255))
+                embed.add_field(name="✦ PACOTES EM DESTAQUE", value="**01 peça**  ·  R$ 25,00\n**02 peças • Combo M+F**  ·  R$ 40,00\n**03 peças**  ·  R$ 65,00\n**04 peças**  ·  R$ 85,00\n**06 peças**  ·  R$ 120,00\n**07 peças**  ·  R$ 150,00\n**08 peças**  ·  R$ 170,00\n**09 peças**  ·  R$ 180,00", inline=False)
+                embed.add_field(name="✦ COMO COMPRAR", value="**01** Escolha o pacote no menu.\n**02** Continue no ticket privado.\n**03** Confirme detalhes, valor final e prazo.\n**04** Pague apenas após a confirmação oficial da equipe.", inline=False)
                 embed.set_footer(text="STUDIO DRACONIC • Qualidade, confiança e suporte")
                 await upsert_bot_message(catalog, embed, StoreOrderView())
 
             products_channel = guild.get_channel(STUDIO_CHANNELS["products_channel"])
-            price_embed = discord.Embed(title="♛ STUDIO DRACONIC • TABELA OFICIAL DE PREÇOS", description="**PREÇOS PROMOCIONAIS**\nCombos selecionados para elevar o padrão do seu projeto. A equipe confirma cada pedido antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
+            price_embed = discord.Embed(title="✦ TABELA OFICIAL DE PREÇOS", description="**PACOTES E VALORES PROMOCIONAIS**\nConfira as opções disponíveis. A equipe confirma o escopo, o valor final e o prazo no ticket antes de qualquer pagamento.", color=discord.Color.from_rgb(135, 65, 255))
             price_embed.add_field(name="Quantidade", value="1 peça\n2 peças\n3 peças\n4 peças\n6 peças\n7 peças\n8 peças\n9 peças", inline=True)
             price_embed.add_field(name="Tipo de compra", value="Avulsa\nCombo M+F\n1 combo + 1 avulsa\n2 combos\n3 combos\n3 combos + 1 avulsa\n4 combos\n4 combos + 1 avulsa", inline=True)
             price_embed.add_field(name="Preço normal", value="R$ 25,00\nR$ 50,00\nR$ 75,00\nR$ 100,00\nR$ 150,00\nR$ 180,00\nR$ 200,00\nR$ 230,00", inline=True)
             price_embed.add_field(name="Total promocional", value="**R$ 25,00**\n**R$ 40,00**\n**R$ 65,00**\n**R$ 85,00**\n**R$ 120,00**\n**R$ 150,00**\n**R$ 170,00**\n**R$ 180,00**", inline=True)
-            price_embed.set_footer(text="STUDIO DRACONIC • Pix confirmado manualmente")
+            price_embed.set_footer(text="STUDIO DRACONIC  •  Valores em BRL  •  Confirmação oficial no ticket")
             await upsert_bot_message(products_channel, price_embed)
 
             target = guild.get_channel(STUDIO_CHANNELS["functioning_channel"])
