@@ -414,6 +414,64 @@ class StudioFeatures(commands.Cog):
         await self.bot.put_json(self.bot.settings_key(interaction.guild.id), settings)
         await interaction.response.send_message("Canais padrão salvos no Upstash Redis:\n" + "\n".join(changed), ephemeral=True)
 
+    @app_commands.command(name="configurar_canais_studio", description="Configura os canais informados e publica Funcionamentos")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def configurar_canais_studio(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro do servidor.")
+        guild = interaction.guild
+        channel_ids = {
+            "welcome_channel": 1557571732624113745,
+            "functioning_channel": 1557572016188432474,
+            "terms_channel": 1557572074338390077,
+            "booster_channel": 1557572137781567578,
+            "store_catalog_channel": 1557572244383989760,
+            "products_channel": 1557573029238800488,
+            "purchase_log_channel": 1565016859131121725,
+            "ticket_log_channel": 1557630941596356671,
+            "moderation_log_channel": 1565018251124146369,
+            "log_channel": 1565018509694738502,
+        }
+        resolved = {name: guild.get_channel(cid) for name, cid in channel_ids.items()}
+        missing = [str(cid) for name, cid in channel_ids.items() if resolved[name] is None]
+        settings = await self.bot.get_settings(guild.id)
+        for name, channel in resolved.items():
+            if isinstance(channel, discord.TextChannel):
+                settings[name] = channel.id
+        await self.bot.put_json(self.bot.settings_key(guild.id), settings)
+        target = resolved["functioning_channel"]
+        if isinstance(target, discord.TextChannel):
+            embed = discord.Embed(
+                title="💜 Como funciona o KAUANLLZ STUDIO CRIATIVO",
+                description="Bem-vindo(a)! Aqui você encontra serviços criativos para FiveM/GTA RP, com atendimento organizado por tickets.",
+                color=discord.Color.from_rgb(125, 75, 220)
+            )
+            embed.add_field(name="🧭 1. Comece por aqui", value="Leia as informações no canal de entrada e confira as regras e os termos antes de comprar.", inline=False)
+            embed.add_field(name="🎨 2. Conheça os serviços", value="Consulte o catálogo para roupas e uniformes, texturização, acessórios, props, otimização e identidade visual.", inline=False)
+            embed.add_field(name="🎫 3. Abra um atendimento", value="Use o painel de tickets ou o botão de pedido do catálogo. Envie referências, detalhes, quantidade e o que precisa.", inline=False)
+            embed.add_field(name="💰 4. Confirme o orçamento", value="A equipe confirma preço, prazo e entrega no ticket oficial. Não pague antes de confirmar os detalhes.", inline=False)
+            embed.add_field(name="🧾 5. Pagamento e entrega", value="O pagamento é via Pix conforme as instruções da equipe. A confirmação é manual; após a confirmação, a equipe libera a entrega combinada.", inline=False)
+            embed.add_field(name="🔐 6. Segurança e suporte", value="Nunca compartilhe senhas ou códigos. Mantenha a conversa no ticket e consulte os termos de compra para saber as condições.", inline=False)
+            embed.set_footer(text="Transformando ideias em identidade. Criatividade, qualidade e personalidade em cada projeto.")
+            await target.send(embed=embed)
+        msg = "✅ Canais do Studio configurados e informações de Funcionamentos publicadas."
+        if missing:
+            msg += "\n⚠️ Não encontrei estes IDs neste servidor: " + ", ".join(missing) + ". Confira se os canais pertencem a este servidor e se o bot consegue vê-los."
+        await ephemeral(interaction, msg)
+
+    @app_commands.command(name="automod_status", description="Mostra o estado básico da automoderação")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def automod_status(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return await ephemeral(interaction, "Use este comando dentro do servidor.")
+        settings = await self.bot.get_settings(interaction.guild.id)
+        channel_id = settings.get("moderation_log_channel")
+        channel = interaction.guild.get_channel(int(channel_id)) if channel_id else None
+        destination = channel.mention if isinstance(channel, discord.TextChannel) else "não configurado"
+        await ephemeral(interaction, "🛡️ **Automoderação básica ativa**\n• Anti-spam: 6 mensagens em 8 segundos, com timeout de 5 minutos.\n• Anti-raid: alerta para 8 ou mais entradas em 20 segundos.\n• Filtro de mensagens repetidas e menções excessivas: ativo após a atualização.\n• Canal de moderação: " + destination)
+
     @app_commands.command(name="configurar_verificacao", description="Configura o cargo de verificado e publica o painel")
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -892,6 +950,47 @@ class StudioFeatures(commands.Cog):
                 await self.redis.expire(mission_key, 172800)
         if not isinstance(message.author, discord.Member) or message.author.guild_permissions.manage_messages:
             return
+        settings = await self.bot.get_settings(gid)
+        moderation_channel_id = settings.get("moderation_log_channel")
+        moderation_channel = message.guild.get_channel(int(moderation_channel_id)) if moderation_channel_id else None
+
+        async def moderation_log(text):
+            target = moderation_channel if isinstance(moderation_channel, discord.TextChannel) else None
+            if target:
+                try:
+                    await target.send(text[:1900])
+                except discord.HTTPException:
+                    log.exception("Falha ao enviar log de automoderação")
+            else:
+                await feature_log(self.bot, message.guild, text)
+
+        if len(message.mentions) >= 5 or len(message.role_mentions) >= 3:
+            try:
+                await message.delete()
+            except discord.HTTPException:
+                pass
+            try:
+                await message.author.timeout(datetime.now(timezone.utc) + timedelta(minutes=2), reason="Automod: excesso de menções")
+            except discord.HTTPException:
+                pass
+            await moderation_log(f"🛡️ **Automod — menções excessivas**\nUsuário: {message.author.mention} (ID {uid})\nCanal: {message.channel.mention}\nAção: mensagem removida e timeout de 2 minutos.")
+            return
+
+        content = message.content.strip().casefold()
+        if len(content) >= 5:
+            repeat_key = key(gid, f"repeat:{uid}")
+            previous = await self.redis.get(repeat_key)
+            if isinstance(previous, bytes):
+                previous = previous.decode("utf-8", errors="ignore")
+            await self.redis.set(repeat_key, content[:500], ex=20)
+            if previous == content[:500]:
+                try:
+                    await message.delete()
+                except discord.HTTPException:
+                    pass
+                await moderation_log(f"🛡️ **Automod — mensagem repetida**\nUsuário: {message.author.mention} (ID {uid})\nCanal: {message.channel.mention}\nAção: mensagem repetida removida.")
+                return
+
         spam_key = key(gid, f"spam:{uid}:8s")
         count = await self.redis.incr(spam_key)
         if int(count) == 1:
@@ -907,7 +1006,7 @@ class StudioFeatures(commands.Cog):
                     await message.channel.send(f"{message.author.mention}, reduza a velocidade das mensagens.", delete_after=8)
                 except discord.HTTPException:
                     pass
-                await feature_log(self.bot, message.guild, f"Anti-spam acionado para {message.author.mention} em {message.channel.mention}.")
+                await moderation_log(f"🛡️ **Automod — anti-spam**\nUsuário: {message.author.mention} (ID {uid})\nCanal: {message.channel.mention}\nAção: timeout de 5 minutos por excesso de mensagens.")
 
 
 
