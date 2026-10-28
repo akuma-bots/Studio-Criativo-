@@ -206,7 +206,7 @@ class ProductSelect(discord.ui.Select):
         if pix_key_kauan:
             pix_lines.append("**Kauan Salles** — " + discord.utils.escape_markdown(str(pix_key_kauan)))
         pix_lines.append("Pague somente após a equipe confirmar o valor. Confira o nome do destinatário antes de concluir.")
-        embed.add_field(name="Pagamento via Pix", value="\\n".join(pix_lines)[:1024], inline=False)
+        embed.add_field(name="Pagamento via Pix", value="\n".join(pix_lines)[:1024], inline=False)
         embed.add_field(name="Próximos passos", value="1. Confirme os detalhes com a equipe.\n2. Pague via Pix após a confirmação.\n3. A equipe valida o recebimento e libera a entrega.", inline=False)
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         order = {"order_id": order_id, "guild_id": guild.id, "channel_id": channel.id, "user_id": interaction.user.id, "product_id": product_id, "product_name": product["name"], "price": product.get("price", "A confirmar"), "status": "aguardando_pagamento", "created_at": int(time.time())}
