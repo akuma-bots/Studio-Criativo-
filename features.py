@@ -370,7 +370,7 @@ class StudioFeatures(commands.Cog):
     @app_commands.command(name="produto_cadastrar", description="Cadastra produto pronto ou por encomenda na loja")
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.checks.has_permissions(manage_guild=True)
-    async def produto_cadastrar(self, interaction: discord.Interaction, nome: app_commands.Range[str, 2, 80], preco: str, descricao: str, entrega: str, por_encomenda: bool = False):
+    async def produto_cadastrar(self, interaction: discord.Interaction, nome: str, preco: str, descricao: str, entrega: str, por_encomenda: bool = False):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando dentro de um servidor.")
         if len(preco) > 50 or len(descricao) > 900 or len(entrega) > 1500:
