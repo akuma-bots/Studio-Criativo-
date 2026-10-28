@@ -11,7 +11,7 @@ from discord.ext import commands, tasks
 
 log = logging.getLogger(__name__)
 
-# Instalação dedicada ao KAUANLLZ STUDIO CRIATIVO: canais e Pix fixos.
+# Instalação dedicada ao STUDIO DRACONIC: canais e Pix fixos.
 STUDIO_CHANNELS = {
     "welcome_channel": 1557571732624113745,
     "functioning_channel": 1557572016188432474,
@@ -93,7 +93,7 @@ class VerificationView(discord.ui.View):
         if role in interaction.user.roles:
             return await ephemeral(interaction, "Você já está verificado! ✅")
         try:
-            await interaction.user.add_roles(role, reason="Verificação pelo painel do Studio Criativo")
+            await interaction.user.add_roles(role, reason="Verificação pelo painel do Studio Draconic")
         except discord.Forbidden:
             return await ephemeral(interaction, "Não tenho permissão para atribuir o cargo de verificado.")
         except discord.HTTPException:
@@ -109,7 +109,7 @@ class VerificationView(discord.ui.View):
 
 class StoreTutorialView(discord.ui.View):
     PAGES = [
-        ("👋 Bem-vindo à loja", "O **Studio Criativo** cria roupas, uniformes e peças personalizadas para servidores de **GTA RP**. Leia as etapas antes de iniciar seu pedido.\n\n🔒 Nunca envie senhas, códigos de autenticação ou acesso à sua conta."),
+        ("👋 Bem-vindo à loja", "O **Studio Draconic** cria roupas, uniformes e peças personalizadas para servidores de **GTA RP**. Leia as etapas antes de iniciar seu pedido.\n\n🔒 Nunca envie senhas, códigos de autenticação ou acesso à sua conta."),
         ("1️⃣ Escolha o produto", "Confira o catálogo e escolha a categoria: **roupas e uniformes**, **acessórios**, **pacotes RP** ou **personalizados**.\n\nSe for uma encomenda personalizada, prepare referências, nome da cidade/servidor, modelo desejado e quantidade."),
         ("2️⃣ Abra seu ticket", "Clique em **Fazer pedido** no catálogo. O bot abrirá um canal privado para você e a equipe.\n\nEnvie os detalhes do pedido e, se necessário, imagens de referência. Não abra vários tickets para a mesma compra."),
         ("3️⃣ Confirme o orçamento", "A equipe confirmará o produto, o preço final, o prazo e os detalhes da entrega. **Não pague antes de confirmar o valor no ticket oficial.**"),
@@ -137,8 +137,8 @@ class StoreTutorialView(discord.ui.View):
 
     def _embed(self):
         title, body = self.PAGES[self.page]
-        embed = discord.Embed(title=f"🐉 KAUANLLZ • GUIA DA LOJA • {title}", description=body, color=discord.Color.from_rgb(125, 75, 220))
-        embed.set_footer(text=f"Studio Criativo • Etapa {self.page + 1} de {len(self.PAGES)}")
+        embed = discord.Embed(title=f"🐉 STUDIO DRACONIC • GUIA DA LOJA • {title}", description=body, color=discord.Color.from_rgb(125, 75, 220))
+        embed.set_footer(text=f"Studio Draconic • Etapa {self.page + 1} de {len(self.PAGES)}")
         return embed
 
     async def previous_page(self, interaction: discord.Interaction):
@@ -197,7 +197,7 @@ class ProductSelect(discord.ui.Select):
         channel = await guild.create_text_channel(name=f"pedido-{interaction.user.name[:12]}".lower().replace(" ", "-"), category=category, overwrites=overwrites, topic=f"Pedido {order_id} | scpro-ticket-owner:{interaction.user.id} scpro-order:true", reason=f"Pedido da loja {order_id} aberto por {interaction.user}")
         pix_key_kaua = PIX_KEY_KAUA
         pix_key_kauan = PIX_KEY_KAUAN
-        embed = discord.Embed(title=f"🐉 KAUANLLZ STUDIO • PEDIDO {order_id}", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
+        embed = discord.Embed(title=f"🐉 STUDIO DRACONIC • PEDIDO {order_id}", description=f"Olá {interaction.user.mention}! Seu pedido foi criado. A equipe vai confirmar os detalhes antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
         embed.add_field(name="Produto", value=discord.utils.escape_mentions(product["name"]), inline=True)
         embed.add_field(name="Valor", value=discord.utils.escape_mentions(str(product.get("price", "A confirmar"))), inline=True)
         embed.add_field(name="Tipo", value="Por encomenda" if product.get("made_to_order") else "Produto pronto", inline=True)
@@ -281,7 +281,7 @@ class StoreOrderView(discord.ui.View):
             reason=f"Pedido da loja aberto por {interaction.user}"
         )
         embed = discord.Embed(
-            title="🛍️ Novo pedido • Studio Criativo",
+            title="🛍️ Novo pedido • Studio Draconic",
             description=(f"Olá {interaction.user.mention}! Conte à equipe o que você procura.\n\n"
                          "**Para agilizar, envie:**\n"
                          "• Produto ou categoria desejada\n• Servidor/cidade de GTA RP\n"
@@ -300,11 +300,11 @@ class StoreOrderView(discord.ui.View):
     @discord.ui.button(label="Consultar preços", style=discord.ButtonStyle.secondary, emoji="💜", custom_id="scpro:store:prices")
     async def show_prices(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
-            title="♛ KAUANLLZ • TABELA DE PREÇOS",
+            title="♛ STUDIO DRACONIC • TABELA DE PREÇOS",
             description="**COMBOS PROMOCIONAIS**\n\n**01 peça** — R$ 25,00\n**02 peças** — R$ 40,00\n**03 peças** — R$ 65,00\n**04 peças** — R$ 85,00\n**06 peças** — R$ 120,00\n**07 peças** — R$ 150,00\n**08 peças** — R$ 170,00\n**09 peças** — R$ 180,00\n\nPara quantidades diferentes, consulte a equipe no ticket. O valor e o prazo serão confirmados antes do pagamento.",
             color=discord.Color.from_rgb(155, 35, 255),
         )
-        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Preto & Roxo Neon")
+        embed.set_footer(text="🐉 STUDIO DRACONIC • Preto & Roxo Neon")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
@@ -371,12 +371,12 @@ class TicketPanelView(discord.ui.View):
             reason=f"Ticket de {title} aberto por {interaction.user}",
         )
         embed = discord.Embed(
-            title=f"🐉 KAUANLLZ STUDIO  •  {title.upper()}",
+            title=f"🐉 STUDIO DRACONIC  •  {title.upper()}",
             description=f"Olá {interaction.user.mention}, seu atendimento privado está pronto.\n\n{guidance}\n\n**COMO FUNCIONA**\n**01** Envie os detalhes necessários.\n**02** Aguarde a equipe responder neste canal.\n**03** Confirme as condições antes de realizar pagamentos.\n\n🔒 Este canal é privado. Nunca compartilhe senhas, tokens ou códigos de autenticação.",
             color=discord.Color.from_rgb(155, 35, 255),
         )
         embed.add_field(name="✦ Atendimento organizado", value="Mantenha todas as informações deste assunto neste ticket para facilitar o acompanhamento.", inline=False)
-        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Preto & Roxo Neon")
+        embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         await ephemeral(interaction, f"Seu atendimento de {title} foi criado: {channel.mention}")
         await feature_log(interaction.client, guild, f"Ticket ({title}) aberto por {interaction.user.mention}: {channel.mention}")
@@ -408,7 +408,7 @@ class TicketFeedbackModal(discord.ui.Modal, title="Avalie seu atendimento"):
                 color=discord.Color.from_rgb(155, 35, 255),
                 timestamp=datetime.now(timezone.utc),
             )
-            embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Experiência do cliente")
+            embed.set_footer(text="🐉 STUDIO DRACONIC • Experiência do cliente")
             await feedback_channel.send(embed=embed)
         history_channel = guild.get_channel(STUDIO_CHANNELS["ticket_log_channel"])
         if isinstance(history_channel, discord.TextChannel):
@@ -432,7 +432,7 @@ class TicketFeedbackModal(discord.ui.Modal, title="Avalie seu atendimento"):
                 color=discord.Color.from_rgb(155, 35, 255),
                 timestamp=datetime.now(timezone.utc),
             )
-            embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Histórico de atendimento")
+            embed.set_footer(text="🐉 STUDIO DRACONIC • Histórico de atendimento")
             await history_channel.send(embed=embed)
         await ephemeral(interaction, "Obrigado! Seu feedback foi registrado. Este ticket será encerrado.")
         await asyncio.sleep(2)
@@ -532,7 +532,7 @@ class StudioFeatures(commands.Cog):
             return await ephemeral(interaction, "Escolha um canal de texto para publicar o painel.")
         embed = discord.Embed(
             title="🛡️ Verificação de acesso",
-            description=("Para liberar o acesso à comunidade do **Studio Criativo**, clique no botão abaixo.\n\n"
+            description=("Para liberar o acesso à comunidade do **Studio Draconic**, clique no botão abaixo.\n\n"
                          "**Como funciona**\n"
                          "1. Clique em **Verificar-se**.\n"
                          "2. O bot atribuirá seu cargo de acesso.\n"
@@ -540,7 +540,7 @@ class StudioFeatures(commands.Cog):
                          "🔐 A verificação acontece dentro do Discord. **Nunca pedimos sua senha, token ou login de GTA.**"),
             color=discord.Color.blurple()
         )
-        embed.set_footer(text="Studio Criativo • Verificação oficial")
+        embed.set_footer(text="Studio Draconic • Verificação oficial")
         await target.send(embed=embed, view=VerificationView())
         await ephemeral(interaction, f"Painel publicado em {target.mention}; cargo de verificado: {cargo_verificado.mention}.")
 
@@ -616,7 +616,7 @@ class StudioFeatures(commands.Cog):
         if user is None:
             return await ephemeral(interaction, "Não consegui encontrar o cliente no servidor. Verifique se ele ainda é membro.")
         try:
-            await user.send(embed=discord.Embed(title=f"🐉 KAUANLLZ • PEDIDO {pedido_id} ENTREGUE", description=f"Produto: {discord.utils.escape_mentions(order['product_name'])}\n\n{discord.utils.escape_mentions(delivery)}\n\nObrigado por comprar no Studio Criativo!", color=discord.Color.from_rgb(155, 35, 255)))
+            await user.send(embed=discord.Embed(title=f"🐉 STUDIO DRACONIC • PEDIDO {pedido_id} ENTREGUE", description=f"Produto: {discord.utils.escape_mentions(order['product_name'])}\n\n{discord.utils.escape_mentions(delivery)}\n\nObrigado por comprar no Studio Draconic!", color=discord.Color.from_rgb(155, 35, 255)))
         except discord.Forbidden:
             return await ephemeral(interaction, "Não consegui enviar DM ao cliente. Peça para habilitar mensagens diretas e tente novamente.")
         order["status"] = "entregue"
@@ -659,7 +659,7 @@ class StudioFeatures(commands.Cog):
             if verified_role and verified_role not in interaction.user.roles and not interaction.user.guild_permissions.manage_guild:
                 return await ephemeral(interaction, "Conclua a verificação antes de publicar ou acessar este sistema.")
         embed = discord.Embed(
-            title="👕 Studio Criativo • Loja GTA RP",
+            title="👕 Studio Draconic • Loja GTA RP",
             description=("**Estilo para seu personagem. Identidade para sua cidade.**\n"
                          "Confira nossas categorias e abra um atendimento para solicitar orçamento.\n\n"
                          "🧵 **Peças personalizadas** • 👔 **Uniformes e conjuntos** • 🧢 **Acessórios** • 🎨 **Identidade de facção**\n\n"
@@ -669,13 +669,13 @@ class StudioFeatures(commands.Cog):
         for _, (name, description) in STORE_CATEGORIES.items():
             embed.add_field(name=name, value=description, inline=False)
         embed.add_field(name="📋 Como comprar", value="1. Clique em **Fazer pedido**.\n2. Informe a cidade, o modelo e a quantidade.\n3. Aguarde a confirmação do orçamento pela equipe.", inline=False)
-        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Preto & Roxo Neon")
+        embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
         await target.send(embed=embed, view=StoreOrderView())
         await ephemeral(interaction, f"Catálogo publicado em {target.mention}.")
 
     @app_commands.command(name="loja", description="Mostra os itens disponíveis")
     async def loja(self, interaction):
-        embed = discord.Embed(title="🐉 KAUANLLZ • LOJA OFICIAL", color=discord.Color.from_rgb(155, 35, 255))
+        embed = discord.Embed(title="🐉 STUDIO DRACONIC • LOJA OFICIAL", color=discord.Color.from_rgb(155, 35, 255))
         for item_id, item in ITEMS.items():
             embed.add_field(name=f"{item['name']} — {item['price']} moedas", value=f"{item_id}: {item['description']}", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -801,15 +801,15 @@ class StudioFeatures(commands.Cog):
         if interaction.guild is None:
             return await ephemeral(interaction, "Use este comando dentro de um servidor.")
         embed = discord.Embed(
-            title="♛  KAUANLLZ STUDIO CRIATIVO",
-            description="**CENTRAL DE ATENDIMENTO**\n\nPrecisa de ajuda com uma compra, encomenda ou parceria? Selecione o assunto no menu abaixo e nossa equipe abrirá um canal privado para você.\n\n**✦ Atendimento organizado**\nCada assunto recebe um ticket próprio para manter tudo claro e fácil de acompanhar.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada terão acesso ao ticket.\n\n**🐉 Experiência KAUANLLZ**  •  Identidade, qualidade e personalidade.",
+            title="♛  STUDIO DRACONIC",
+            description="**CENTRAL DE ATENDIMENTO**\n\nPrecisa de ajuda com uma compra, encomenda ou parceria? Selecione o assunto no menu abaixo e nossa equipe abrirá um canal privado para você.\n\n**✦ Atendimento organizado**\nCada assunto recebe um ticket próprio para manter tudo claro e fácil de acompanhar.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada terão acesso ao ticket.\n\n**🐉 Experiência STUDIO DRACONIC**  •  Identidade, qualidade e personalidade.",
             color=discord.Color.from_rgb(155, 35, 255)
         )
         embed.add_field(name="🛍️ Comprar Algo", value="Produtos, pacotes e encomendas personalizadas.", inline=True)
         embed.add_field(name="💬 Dúvidas", value="Preços, prazos e informações antes de comprar.", inline=True)
         embed.add_field(name="🛠️ Suporte Técnico", value="Ajuda com pedidos, pagamentos ou entregas.", inline=True)
         embed.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha a opção correspondente no menu.", inline=False)
-        embed.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO  •  Preto & Roxo Neon")
+        embed.set_footer(text="🐉 STUDIO DRACONIC  •  Preto & Roxo Neon")
         await canal.send(embed=embed, view=TicketPanelView())
         await ephemeral(interaction, f"Painel de tickets publicado em {canal.mention}.")
 
@@ -842,7 +842,7 @@ class StudioFeatures(commands.Cog):
             topic=f"Ticket: {discord.utils.escape_markdown(assunto)} | scpro-ticket-owner:{interaction.user.id}",
             reason=f"Ticket aberto por {interaction.user}"
         )
-        embed = discord.Embed(title="🐉 KAUANLLZ • ATENDIMENTO", description=f"Olá {interaction.user.mention}! A equipe atenderá você aqui.\nAssunto: {discord.utils.escape_markdown(assunto)}", color=discord.Color.blurple())
+        embed = discord.Embed(title="🐉 STUDIO DRACONIC • ATENDIMENTO", description=f"Olá {interaction.user.mention}! A equipe atenderá você aqui.\nAssunto: {discord.utils.escape_markdown(assunto)}", color=discord.Color.blurple())
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketView())
         await interaction.response.send_message(f"Seu ticket foi criado: {channel.mention}", ephemeral=True)
         await feature_log(self.bot, guild, f"Ticket aberto por {interaction.user.mention}: {channel.mention}")
@@ -854,7 +854,7 @@ class StudioFeatures(commands.Cog):
         channel = await self.channel_for(interaction.guild, "suggestion_channel")
         if not isinstance(channel, discord.TextChannel):
             return await ephemeral(interaction, "Configure o canal com /configurar_sistemas primeiro.")
-        embed = discord.Embed(title="🐉 KAUANLLZ • NOVA SUGESTÃO", description=discord.utils.escape_mentions(texto), color=discord.Color.blurple(), timestamp=datetime.now(timezone.utc))
+        embed = discord.Embed(title="🐉 STUDIO DRACONIC • NOVA SUGESTÃO", description=discord.utils.escape_mentions(texto), color=discord.Color.blurple(), timestamp=datetime.now(timezone.utc))
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
         embed.set_footer(text=f"Autor ID: {interaction.user.id}")
         message = await channel.send(embed=embed)
@@ -893,7 +893,7 @@ class StudioFeatures(commands.Cog):
         if not isinstance(channel, discord.TextChannel):
             channel = interaction.channel
         end_at = int(time.time()) + minutos * 60
-        embed = discord.Embed(title="🐉 KAUANLLZ • SORTEIO", description=f"Prêmio: {discord.utils.escape_mentions(premio)}\nGanhadores: {ganhadores}\nEncerra: <t:{end_at}:R>\n\nClique no botão para participar!", color=discord.Color.gold())
+        embed = discord.Embed(title="🐉 STUDIO DRACONIC • SORTEIO", description=f"Prêmio: {discord.utils.escape_mentions(premio)}\nGanhadores: {ganhadores}\nEncerra: <t:{end_at}:R>\n\nClique no botão para participar!", color=discord.Color.gold())
         embed.set_footer(text=f"Criado por {interaction.user.display_name}")
         await interaction.response.send_message(f"Sorteio criado em {channel.mention}.", ephemeral=True)
         message = await channel.send(embed=embed, view=GiveawayView())
@@ -971,7 +971,7 @@ class StudioFeatures(commands.Cog):
                 category = discord.utils.get(guild.categories, name="🎫・Atendimentos")
                 if category is None and guild.me and guild.me.guild_permissions.manage_channels:
                     try:
-                        category = await guild.create_category("🎫・Atendimentos", reason="Configuração automática do Studio Criativo")
+                        category = await guild.create_category("🎫・Atendimentos", reason="Configuração automática do Studio Draconic")
                     except discord.HTTPException:
                         log.exception("Não foi possível criar a categoria de atendimentos")
                 if category:
@@ -1004,16 +1004,16 @@ class StudioFeatures(commands.Cog):
                 try:
                     found_panel = False
                     async for old_panel in ticket_panel_channel.history(limit=50):
-                        if old_panel.author == self.bot.user and old_panel.embeds and old_panel.embeds[0].title == "♛ KAUANLLZ STUDIO • CENTRAL DE ATENDIMENTO":
+                        if old_panel.author == self.bot.user and old_panel.embeds and old_panel.embeds[0].title == "♛ STUDIO DRACONIC • CENTRAL DE ATENDIMENTO":
                             found_panel = True
                             break
                     if not found_panel:
-                        panel = discord.Embed(title="♛ KAUANLLZ STUDIO • CENTRAL DE ATENDIMENTO", description="**BEM-VINDO(A) AO SUPORTE OFICIAL**\n\nEscolha o assunto no menu abaixo e abriremos um canal privado para acompanhar seu caso.\n\n**✦ Atendimento organizado**\nCada ticket tem um assunto específico.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada podem ver o atendimento. Nunca compartilhe senhas ou códigos.", color=discord.Color.from_rgb(155, 35, 255))
+                        panel = discord.Embed(title="♛ STUDIO DRACONIC • CENTRAL DE ATENDIMENTO", description="**BEM-VINDO(A) AO SUPORTE OFICIAL**\n\nEscolha o assunto no menu abaixo e abriremos um canal privado para acompanhar seu caso.\n\n**✦ Atendimento organizado**\nCada ticket tem um assunto específico.\n\n**🔒 Privacidade**\nSomente você e a equipe autorizada podem ver o atendimento. Nunca compartilhe senhas ou códigos.", color=discord.Color.from_rgb(155, 35, 255))
                         panel.add_field(name="🛍️ Comprar Algo", value="Produtos, combos e encomendas.", inline=True)
                         panel.add_field(name="💬 Dúvidas", value="Preços, prazos e funcionamento.", inline=True)
                         panel.add_field(name="🛠️ Suporte Técnico", value="Pedidos, pagamentos e entregas.", inline=True)
                         panel.add_field(name="🎁 Sorteios • 🤝 Parcerias • 🎥 Patrocínio", value="Escolha uma opção no menu.", inline=False)
-                        panel.set_footer(text="🐉 KAUANLLZ STUDIO CRIATIVO • Preto & Roxo Neon")
+                        panel.set_footer(text="🐉 STUDIO DRACONIC • Preto & Roxo Neon")
                         await ticket_panel_channel.send(embed=panel, view=TicketPanelView())
                 except discord.HTTPException:
                     log.exception("Falha ao publicar painel de atendimento")
@@ -1022,13 +1022,13 @@ class StudioFeatures(commands.Cog):
             if isinstance(catalog, discord.TextChannel):
                 try:
                     async for msg in catalog.history(limit=30):
-                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "🐉 KAUANLLZ STUDIO CRIATIVO • CATÁLOGO":
+                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "🐉 STUDIO DRACONIC • CATÁLOGO":
                             break
                     else:
-                        embed = discord.Embed(title="♛ KAUANLLZ STUDIO CRIATIVO", description="**IDENTIDADE. QUALIDADE. PERSONALIDADE.**\nRoupas e combos personalizados para seu projeto de GTA RP. Escolha seu pacote no menu abaixo e receba atendimento privado para alinhar referências, prazo e detalhes.", color=discord.Color.from_rgb(155, 35, 255))
+                        embed = discord.Embed(title="♛ STUDIO DRACONIC", description="**IDENTIDADE. QUALIDADE. PERSONALIDADE.**\nRoupas e combos personalizados para seu projeto de GTA RP. Escolha seu pacote no menu abaixo e receba atendimento privado para alinhar referências, prazo e detalhes.", color=discord.Color.from_rgb(155, 35, 255))
                         embed.add_field(name="👕 Pacotes disponíveis", value="1 peça — **R$ 25,00**\n2 peças • Combo M+F — **R$ 40,00**\n3 peças — **R$ 65,00**\n4 peças — **R$ 85,00**\n6 peças — **R$ 120,00**\n7 peças — **R$ 150,00**\n8 peças — **R$ 170,00**\n9 peças — **R$ 180,00**", inline=False)
                         embed.add_field(name="✦ EXPERIÊNCIA DE COMPRA", value="`01` Escolha seu pacote.\n`02` Um ticket privado será aberto automaticamente.\n`03` A equipe alinha detalhes, valor e prazo.\n`04` Pague somente após a confirmação oficial.", inline=False)
-                        embed.set_footer(text="Studio Criativo • Qualidade, confiança e suporte sempre")
+                        embed.set_footer(text="Studio Draconic • Qualidade, confiança e suporte sempre")
                         await catalog.send(embed=embed, view=StoreOrderView())
                 except discord.HTTPException:
                     log.exception("Falha ao publicar catálogo automático")
@@ -1036,15 +1036,15 @@ class StudioFeatures(commands.Cog):
             if isinstance(products_channel, discord.TextChannel):
                 try:
                     async for msg in products_channel.history(limit=30):
-                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 TABELA DE PREÇOS • STUDIO CRIATIVO":
+                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 TABELA DE PREÇOS • STUDIO DRACONIC":
                             break
                     else:
-                        price_embed = discord.Embed(title="♛ KAUANLLZ  •  TABELA OFICIAL DE PREÇOS", description="**PREÇOS PROMOCIONAIS**\nCombos selecionados para elevar o padrão do seu projeto. Todos os pedidos são confirmados pela equipe antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
+                        price_embed = discord.Embed(title="♛ STUDIO DRACONIC  •  TABELA OFICIAL DE PREÇOS", description="**PREÇOS PROMOCIONAIS**\nCombos selecionados para elevar o padrão do seu projeto. Todos os pedidos são confirmados pela equipe antes do pagamento.", color=discord.Color.from_rgb(155, 35, 255))
                         price_embed.add_field(name="Quantidade", value="1 peça\n2 peças\n3 peças\n4 peças\n6 peças\n7 peças\n8 peças\n9 peças", inline=True)
                         price_embed.add_field(name="Tipo de compra", value="Avulsa\nCombo M+F\n1 combo + 1 avulsa\n2 combos\n3 combos\n3 combos + 1 avulsa\n4 combos\n4 combos + 1 avulsa", inline=True)
                         price_embed.add_field(name="Preço normal", value="R$ 25,00\nR$ 50,00\nR$ 75,00\nR$ 100,00\nR$ 150,00\nR$ 180,00\nR$ 200,00\nR$ 230,00", inline=True)
                         price_embed.add_field(name="Total promocional", value="**R$ 25,00**\n**R$ 40,00**\n**R$ 65,00**\n**R$ 85,00**\n**R$ 120,00**\n**R$ 150,00**\n**R$ 170,00**\n**R$ 180,00**", inline=True)
-                        price_embed.set_footer(text="KAUANLLZ STUDIO CRIATIVO  •  Consulte a equipe para quantidades especiais | Pix confirmado manualmente")
+                        price_embed.set_footer(text="STUDIO DRACONIC  •  Consulte a equipe para quantidades especiais | Pix confirmado manualmente")
                         await products_channel.send(embed=price_embed)
                 except discord.HTTPException:
                     log.exception("Falha ao publicar tabela de preços")
@@ -1052,10 +1052,10 @@ class StudioFeatures(commands.Cog):
             if isinstance(target, discord.TextChannel):
                 try:
                     async for msg in target.history(limit=30):
-                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 Como funciona o KAUANLLZ STUDIO CRIATIVO":
+                        if msg.author == self.bot.user and msg.embeds and msg.embeds[0].title == "💜 Como funciona o STUDIO DRACONIC":
                             break
                     else:
-                        embed = discord.Embed(title="💜 Como funciona o KAUANLLZ STUDIO CRIATIVO", description="Bem-vindo(a)! Consulte os canais de informações e o catálogo, abra um ticket para atendimento e aguarde a equipe confirmar preço e prazo antes de pagar.", color=discord.Color.from_rgb(125, 75, 220))
+                        embed = discord.Embed(title="💜 Como funciona o STUDIO DRACONIC", description="Bem-vindo(a)! Consulte os canais de informações e o catálogo, abra um ticket para atendimento e aguarde a equipe confirmar preço e prazo antes de pagar.", color=discord.Color.from_rgb(125, 75, 220))
                         embed.add_field(name="🧭 Comece por aqui", value="Leia as regras e os termos nos canais indicados antes de fazer um pedido.", inline=False)
                         embed.add_field(name="🎨 Serviços e catálogo", value="Confira os produtos e serviços disponíveis no catálogo oficial.", inline=False)
                         embed.add_field(name="🎫 Atendimento", value="Pedidos e suporte devem continuar nos tickets privados do servidor.", inline=False)
@@ -1073,7 +1073,7 @@ class StudioFeatures(commands.Cog):
         role = member.guild.get_role(int(role_id)) if role_id else None
         if role and member.guild.me and role < member.guild.me.top_role:
             try:
-                await member.add_roles(role, reason="Cargo automático Studio Criativo Pro")
+                await member.add_roles(role, reason="Cargo automático Studio Draconic Pro")
             except discord.HTTPException:
                 log.exception("Falha ao atribuir cargo automático")
         raid_key = key(member.guild.id, "raid-joins:20s")
