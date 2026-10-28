@@ -6,12 +6,10 @@ services:
     region: virginia
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
-    disk:
-      name: studio-criativo-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: DISCORD_TOKEN
         sync: false
-      - key: DATABASE_PATH
-        value: /var/data/studio_criativo.db
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
