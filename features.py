@@ -117,6 +117,7 @@ class StudioFeatures(commands.Cog):
         logs: discord.TextChannel = None,
         tickets: discord.CategoryChannel = None,
         sugestoes: discord.TextChannel = None,
+        votacoes: discord.TextChannel = None,
         sorteios: discord.TextChannel = None,
         economia: discord.TextChannel = None,
         niveis: discord.TextChannel = None,
@@ -128,7 +129,7 @@ class StudioFeatures(commands.Cog):
         values = {
             "welcome_channel": boas_vindas, "log_channel": logs,
             "ticket_category": tickets, "suggestion_channel": sugestoes,
-            "giveaway_channel": sorteios, "economy_channel": economia,
+            "poll_channel": votacoes, "giveaway_channel": sorteios, "economy_channel": economia,
             "level_channel": niveis, "ticket_staff_role": equipe_ticket,
         }
         changed = []
@@ -324,8 +325,11 @@ class StudioFeatures(commands.Cog):
         emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
         embed = discord.Embed(title=discord.utils.escape_mentions(pergunta), description="\n".join(f"{emojis[i]} {choice}" for i, choice in enumerate(choices)), color=discord.Color.blurple())
         embed.set_footer(text=f"Votação criada por {interaction.user.display_name}")
-        await interaction.response.send_message("Votação criada!", ephemeral=True)
-        message = await interaction.channel.send(embed=embed)
+        channel = await self.channel_for(interaction.guild, "poll_channel")
+        if not isinstance(channel, discord.TextChannel):
+            channel = interaction.channel
+        await interaction.response.send_message(f"Votação criada em {channel.mention}!", ephemeral=True)
+        message = await channel.send(embed=embed)
         for emoji in emojis[:len(choices)]:
             await message.add_reaction(emoji)
 
